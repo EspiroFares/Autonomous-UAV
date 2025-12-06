@@ -1,0 +1,18 @@
+build/
+install/
+log/
+
+# ROS2/colcon workspace
+software/drone_ws/build/
+software/drone_ws/install/
+software/drone_ws/log/
+
+# Editor/OS
+*.swp
+*~
+.vscode/
+.idea/
+
+# Media / genererade filer
+bevis.jpg
+*.mp4
