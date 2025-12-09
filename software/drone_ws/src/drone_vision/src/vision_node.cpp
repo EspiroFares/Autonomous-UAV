@@ -33,7 +33,7 @@ public:
 
 private:
     void timer_callback() {
-        cv::Mat frame_raw, frame, gray;
+        cv::Mat frame_raw, frame, gray, small_gray;
         if (!cap_.isOpened()) return;
 
         cap_ >> frame_raw;
@@ -42,23 +42,36 @@ private:
             return;
         }
 
-         cv::rotate(frame_raw, frame, cv::ROTATE_180);
-        // --- Face detection ---
+        //Keep for now only .mp4 
+        cv::rotate(frame_raw, frame, cv::ROTATE_180);
+
+        // --- Downscaling for increasing FPS ---
+        // Raspberry pi got 4 FPS on 720p, 320p got 14fps
+        double scale_factor = 4;
 
         // Grayscale the image
         cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
-        cv::equalizeHist(gray, gray);
 
-        // Search for faces
+        cv::resize(gray, small_gray, cv::Size(), 1.0/scale_factor, 1.0/scale_factor);
+        cv::equalizeHist(small_gray, small_gray);
+
+
+        // --- Face detection ---
         std::vector<cv::Rect> faces;
-        face_cascade_.detectMultiScale(gray, faces, 1.1, 3, 0, cv::Size(30,30));
+        face_cascade_.detectMultiScale(small_gray, faces, 1.1, 3, 0, cv::Size(30,30));
 
         // Draw rectangle around faces
         for (size_t i = 0; i < faces.size(); i++) {
-            cv::rectangle(frame, faces[i], cv::Scalar(255,0,0) , 3);
+            cv::Rect big_rect;
+            big_rect.x = faces[i].x * scale_factor;
+            big_rect.y = faces[i].y * scale_factor;
+            big_rect.width = faces[i].width * scale_factor;
+            big_rect.height = faces[i].height * scale_factor;
+
+            cv::rectangle(frame, big_rect, cv::Scalar(255, 0, 0), 3);
         }
 
-        // save snapshop
+        // save snapshot
         if (faces.size() > 0 && !snapshot_taken_) {
             cv::imwrite("/home/fares/Drone/bevis.jpg", frame);
             RCLCPP_INFO(this->get_logger(), "SNAP! Ansikte hittat och bild sparad till ~/Drone/bevis.jpg");
