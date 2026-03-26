@@ -1,0 +1,11 @@
+services:
+  ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: drone_ros2
+    tty: true
+    stdin_open: true
+    working_dir: /workspaces/drone_ws
+    volumes:
+      - ./drone_ws:/workspaces/drone_ws
