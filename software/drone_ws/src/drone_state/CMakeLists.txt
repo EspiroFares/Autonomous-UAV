@@ -13,6 +13,19 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(drone_interfaces REQUIRED)
 
+add_executable(mock_fcu_node src/mock_fcu_node.cpp)
+
+ament_target_dependencies(mock_fcu_node
+  rclcpp
+  nav_msgs
+  drone_interfaces
+)
+
+install(TARGETS
+  mock_fcu_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
