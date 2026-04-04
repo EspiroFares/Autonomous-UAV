@@ -21,8 +21,19 @@ ament_target_dependencies(mock_fcu_node
   drone_interfaces
 )
 
+add_executable(world_model_node src/world_model_node.cpp)
+
+ament_target_dependencies(world_model_node
+  rclcpp
+  std_msgs
+  nav_msgs
+  geometry_msgs
+  drone_interfaces
+)
+
 install(TARGETS
   mock_fcu_node
+  world_model_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
