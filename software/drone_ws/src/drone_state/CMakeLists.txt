@@ -15,6 +15,7 @@ find_package(drone_interfaces REQUIRED)
 
 add_executable(mock_fcu_node src/mock_fcu_node.cpp)
 
+
 ament_target_dependencies(mock_fcu_node
   rclcpp
   nav_msgs
@@ -31,9 +32,18 @@ ament_target_dependencies(world_model_node
   drone_interfaces
 )
 
+add_executable(mock_target_node src/mock_target_node.cpp)  
+
+ament_target_dependencies(mock_target_node                                 
+rclcpp        
+drone_interfaces
+)      
+
+
 install(TARGETS
   mock_fcu_node
   world_model_node
+  mock_target_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
