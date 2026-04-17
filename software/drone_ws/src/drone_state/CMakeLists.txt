@@ -12,6 +12,7 @@ find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(drone_interfaces REQUIRED)
+find_package(mavros_msgs REQUIRED)   
 
 add_executable(mock_fcu_node src/mock_fcu_node.cpp)
 
@@ -37,13 +38,25 @@ add_executable(mock_target_node src/mock_target_node.cpp)
 ament_target_dependencies(mock_target_node                                 
 rclcpp        
 drone_interfaces
-)      
+)   
+
+add_executable(fcu_bridge_node src/fcu_bridge_node.cpp)
+
+ament_target_dependencies(fcu_bridge_node                   
+    rclcpp                                       
+    nav_msgs                                                
+    geometry_msgs                                           
+    drone_interfaces                             
+    mavros_msgs     
+  )          
+
 
 
 install(TARGETS
   mock_fcu_node
   world_model_node
   mock_target_node
+  fcu_bridge_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
