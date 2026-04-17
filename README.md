@@ -1,5 +1,5 @@
 # DIY Indoor Face-Following Drone  
-**ROS 2 Jazzy · Raspberry Pi 4 · OpenCV · Docker · C++17**
+**ROS 2 Jazzy · Raspberry Pi 4 · OpenCV · Docker · C++**
 
 A modular ROS 2 drone autonomy stack for an indoor **face-following drone**, designed around a **Raspberry Pi 4 companion computer** and a separate **Flight Controller (FC)** for stabilization and low-level control.
 
