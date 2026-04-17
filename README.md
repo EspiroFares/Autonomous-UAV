@@ -1,115 +1,115 @@
-# DIY Indoor Face-Following Drone  
-**ROS 2 Jazzy · Raspberry Pi 4 · OpenCV · Docker · C++**
+# Indoor Face-Following Drone
 
-A modular ROS 2 drone autonomy stack for an indoor **face-following drone**, designed around a **Raspberry Pi 4 companion computer** and a separate **Flight Controller (FC)** for stabilization and low-level control.
+ROS 2-based autonomy stack for a DIY indoor drone built around a Raspberry Pi 4 companion computer and a separate ArduPilot flight controller.
 
-The long-term goal is a real indoor drone that can detect a person’s face, estimate relative target position, decide when to follow, and send safe high-level motion commands to the FC.
+The idea is to keep the split clean:
 
-The project is currently in a **software architecture sprint**, using a `mock_fcu_node` to validate the full autonomy pipeline.
+- the **Raspberry Pi** runs perception, world modeling, mission logic, control, and safety
+- the **flight controller** handles stabilization, hover, and low-level motor control
 
----
+## Current status
 
-## Project Goal
+At the moment:
 
-This project is being built as a serious robotics/software engineering portfolio piece with a strong focus on:
+- the **mock chain is working end-to-end**
+- the **ArduPilot FC is installed**
+- the drone can **hover in place**
+- the FC is connected to the Raspberry Pi over **USB** (`/dev/ttyACM0`) (for now)
+- I am currently writing `fcu_bridge_node` using **MAVROS** and **MAVLink 2**
 
-- clean ROS 2 architecture
-- modular package design
-- safety-aware control flow
-- hardware/software separation of concerns
-- reproducible development in Docker
-- step-by-step integration from mock environment to real hardware
+Current milestone:
 
-**Current milestone:**  
-**Target in → yaw command out via mock FCU**
+**Mock chain verified end-to-end — writing `fcu_bridge_node` with MAVROS**
 
-That means the current focus is not perfect AI tracking or full flight autonomy yet — it is to get the **architecture working end-to-end**.
+The goal right now is not fancy perception or polished flight behavior. The goal is to get the full architecture working cleanly from ROS all the way to the flight controller.
 
 ---
 
-## System Overview
+## Architecture
 
-The Raspberry Pi runs all **high-level autonomy**:
-
-- perception
-- world modeling
-- mission logic
-- control
-- safety supervision
-
-The Flight Controller remains responsible for all **low-level flight-critical loops**:
-
-- stabilization
-- hover
-- motor control
-- optical flow handling
-- downward lidar/rangefinder handling
-
-This separation is intentional. ROS 2 does **not** replace the FC.
-
-### High-Level System Architecture
+### System overview
 
 ![System Overview](docs/architecture/System_Overview.drawio.png)
 
-### ROS 2 Node / Topic Architecture
+### ROS node / topic architecture
 
 ![ROS 2 Architecture](docs/architecture/ROS_architecture.drawio-3.png)
 
 ---
 
-## Key Engineering Decisions
+## Design rules
 
-### 1. The FCU bridge is the only gateway
-All communication between ROS and the Flight Controller must go through `fcu_bridge_node`.
+A few design decisions are fixed from the start.
 
-This keeps the integration boundary clean and prevents control logic, safety logic, and hardware communication from becoming tightly coupled.
+### 1. `fcu_bridge_node` is the only gateway to the FC
 
-### 2. Safety has veto power
-Safety is not treated as a side feature.  
-A safety node can override normal mission behavior and force a hold/failsafe state at any time.
+No ROS node should talk directly to the flight controller except `fcu_bridge_node`.
 
-### 3. ROS sends high-level setpoints only
-ROS generates commands such as:
+That means no direct FC connection from:
+
+- `follow_controller_node`
+- `setpoint_validation_node`
+- `safety_supervision_node`
+
+Everything goes through one bridge node. That keeps the hardware boundary clear and makes the rest of the stack easier to test.
+
+### 2. Safety can override everything else
+
+Mission logic does not get the final word.  
+If safety decides the drone should hold or stop, it should be able to block commands immediately.
+
+### 3. ROS sends high-level commands only
+
+The ROS side outputs commands like:
 
 - `vx`
 - `vy`
 - `vz`
 - `yaw_rate`
 
-The FC is still responsible for the fast inner loops and stabilization.
+The FC still owns the inner loops, stabilization, hover, and motor control.
 
-### 4. Optical flow and downward lidar stay on the FC
-These sensors are stability-critical and should remain on the flight controller instead of being pulled into the companion computer stack.
+### 4. Stability-critical sensors stay on the FC
+
+Optical flow and the downward rangefinder stay on the flight controller. They are part of the low-level flight stack and are not being moved onto the Pi.
 
 ---
 
-## Current Status
+## What is implemented
 
-### Implemented
-- Custom ROS 2 message package: `drone_interfaces`
+### Done
+
+- `drone_interfaces`
 - `mock_fcu_node`
 - `world_model_node`
-- `vision_node` using Haar Cascade face detection
-- Docker-based ROS 2 Jazzy development environment
-- System architecture and ROS graph design
-
-### In Progress / Next
+- `mock_target_node`
 - `mission_manager_node`
 - `follow_controller_node`
 - `setpoint_validation_node`
-- launch setup for the full mock chain
-- safety nodes
-- full perception pipeline
-- real `fcu_bridge_node` once replacement FC hardware arrives
+- `mock_chain.launch.py`
+- Docker-based ROS 2 Jazzy environment
+- MAVROS installed in the container
+- FC connected to Pi and hovering in real hardware
+
+### In progress
+
+- `fcu_bridge_node` via MAVROS
+
+### Not started yet
+
+- `safety_supervision_node`
+- `hold_failsafe_node`
+- full perception pipeline in `drone_perception`
 
 ---
 
-## Repository Structure
+## Repository layout
 
 ```text
 Drone/
 ├── README.md
 ├── CLAUDE.md
+├── haarcascade_frontalface_default.xml
 ├── docs/architecture/
 │   ├── ROS_architecture-3.drawio
 │   ├── ROS_architecture.drawio-3.png
