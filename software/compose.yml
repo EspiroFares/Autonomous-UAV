@@ -12,3 +12,6 @@ services:
       - /dev/ttyACM0:/dev/ttyACM0  
     volumes:
       - ./drone_ws:/workspaces/drone_ws
+    ports:
+      - "14550:14550/udp"
+      - "14555:14555/udp"
