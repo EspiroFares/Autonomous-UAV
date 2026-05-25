@@ -21,10 +21,12 @@ class FcuBridgeNode : public rclcpp::Node {
     current_mode_("")
     {
 
-        //MAVROS subs
-        mavros_state_sub_ = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", 10, std::bind(&FcuBridgeNode::MavrosStateCallback, this, std::placeholders::_1));
+        //MAVROS subs — must match MAVROS publisher QoS (BEST_EFFORT)
+        auto mavros_qos = rclcpp::QoS(10).best_effort();
 
-        mavros_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/mavros/local_position/odom", 10, std::bind(&FcuBridgeNode::MavrosOdomCallback, this, std::placeholders::_1));
+        mavros_state_sub_ = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", mavros_qos, std::bind(&FcuBridgeNode::MavrosStateCallback, this, std::placeholders::_1));
+
+        mavros_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/mavros/local_position/odom", mavros_qos, std::bind(&FcuBridgeNode::MavrosOdomCallback, this, std::placeholders::_1));
 
         //ROS subs
         setpoint_sub_ = this->create_subscription<drone_interfaces::msg::ControlSetpoint>("/control/setpoint_validated", 10, std::bind(&FcuBridgeNode::SetpointCallback, this, std::placeholders::_1));

@@ -15,17 +15,24 @@ find_package(nav_msgs REQUIRED)
 
 
 add_executable(follow_controller_node src/follow_controller_node.cpp)
+add_executable(setpoint_validation_node src/setpoint_validation_node.cpp)
 
 ament_target_dependencies(follow_controller_node
-    rclcpp                                                                                
-    std_msgs      
+    rclcpp
+    std_msgs
     geometry_msgs
     nav_msgs
     drone_interfaces
   )
 
+ament_target_dependencies(setpoint_validation_node
+    rclcpp
+    drone_interfaces
+  )
+
 install(TARGETS
   follow_controller_node
+  setpoint_validation_node
   DESTINATION lib/${PROJECT_NAME})
 
 
