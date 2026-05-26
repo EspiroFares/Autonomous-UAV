@@ -8,13 +8,16 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(std_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TargetState.msg"
   "msg/VehicleStatus.msg"
   "msg/MissionState.msg"
   "msg/ControlSetpoint.msg"
-  DEPENDENCIES builtin_interfaces
+  "msg/Detection.msg"
+  "msg/Track.msg"
+  DEPENDENCIES builtin_interfaces std_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

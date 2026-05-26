@@ -1,0 +1,9 @@
+std_msgs/Header header
+bool valid
+uint32 track_id
+float32 center_x
+float32 center_y
+float32 width
+float32 height
+float32 velocity_x
+float32 velocity_y
