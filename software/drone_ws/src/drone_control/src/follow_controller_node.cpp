@@ -65,10 +65,11 @@ class FollowControllerNode : public rclcpp::Node {
             const double KP_VX = 0.5;
             const double MAX_YAW_RATE = 1.0;
             const double MAX_VX = 0.5;
+            const double DESIRED_DISTANCE = 0.5; 
 
             //clamp yaw rate in bound
-            double yaw_rate = std::clamp(KP_YAW * target_y_, -MAX_YAW_RATE , MAX_YAW_RATE);
-            double vx = std::clamp(KP_VX * target_x_ , -MAX_VX, MAX_VX);
+            double yaw_rate = std::clamp(KP_YAW * -target_y_, -MAX_YAW_RATE , MAX_YAW_RATE);
+            double vx = std::clamp(KP_VX * (target_x_ - DESIRED_DISTANCE), -MAX_VX, MAX_VX);
 
             setpoint.vx = vx;
             setpoint.vy = 0.0;

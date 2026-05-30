@@ -6,7 +6,7 @@ DIY indoor **face-following drone** using ROS 2 (Jazzy) on a Raspberry Pi 4 comp
 
 **Goal:** Strong enough for GitHub, CV, interviews, and eventual report/presentation.
 
-**Current milestone:** "Mock chain verified end-to-end — writing fcu_bridge_node with MAVROS"
+**Current milestone:** "Moved to Linux — running full Gazebo simulation with simulated camera feeding into real perception pipeline (MediaPipe) via ros_gz_bridge"
 
 ---
 
@@ -38,7 +38,7 @@ DIY indoor **face-following drone** using ROS 2 (Jazzy) on a Raspberry Pi 4 comp
 | OS | Ubuntu (Docker, ROS Jazzy base image) |
 | Framework | ROS 2 Jazzy |
 | Language | C++17 (rclcpp) |
-| Vision | OpenCV 4 — Haar Cascade face detection |
+| Vision | OpenCV 4 + MediaPipe Pose — body/person detection via shoulder landmarks |
 | Video I/O | cv_bridge, image_transport |
 | Messages | Custom ROS 2 `.msg` definitions |
 | Build | CMake + ament_cmake |
@@ -71,8 +71,8 @@ Drone/
         ├── drone_vision/                ← vision_node ✓ (old perception test code removed)
         ├── drone_control/               ← follow_controller_node ✓, setpoint_validation_node ✓
         ├── drone_behavior/              ← mission_manager_node ✓
-        ├── drone_bringup/               ← launch/mock_chain.launch.py ✓
-        ├── drone_perception/            ← EMPTY (future home of full perception pipeline)
+        ├── drone_bringup/               ← mock_chain.launch.py ✓, fake_video_chain.launch.py ✓, real_chain.launch.py ✓
+        ├── drone_perception/            ← IN PROGRESS — camera_driver ✓, fake_camera_driver ✓, person_detector ✓, person_tracker ✓, target_estimator ✓, image_preprocessing ✓
         ├── drone_safety/                ← EMPTY
         ├── drone_sim/                   ← PLANNED (not yet created)
         ├── drone_description/           ← PLANNED (not yet created)
@@ -111,8 +111,10 @@ Defines all shared message types. Must be built first — all other packages dep
 |---|---|---|
 | `VehicleStatus.msg` | FCU state | `connected`, `armed`, `offboard_ready`, `mode`, `hovering` |
 | `ControlSetpoint.msg` | Velocity command to FCU | `vx`, `vy`, `vz`, `yaw_rate`, `hold` |
-| `TargetState.msg` | Detected face info | `detected`, `confidence`, `yaw_error`, `distance_estimate`, `bbox_*` |
+| `TargetState.msg` | Detected person info | `detected`, `confidence`, `yaw_error`, `distance_estimate` |
 | `MissionState.msg` | Mission phase | `state`, `follow_enabled`, `target_valid` |
+| `Detection.msg` | Raw detector output | `header`, `detected`, `confidence`, `bbox_center_x/y`, `bbox_width/height`, `shoulder_width_px` |
+| `Track.msg` | Smoothed tracker output | `header`, `valid`, `track_id`, `center_x/y`, `width`, `height`, `velocity_x/y` |
 
 ---
 
@@ -172,8 +174,8 @@ Converts target position into velocity setpoints.
 - **Publishes:** `/control/setpoint_raw` (ControlSetpoint) @ 10Hz
 - **Logic:**
   - `follow_enabled = false` → publish `hold = true`
-  - `yaw_rate = clamp(KP_YAW × target_y_, ±1.0)` — `KP_YAW = 1.2`
-  - `vx = clamp(KP_VX × target_x_, ±0.5)` — `KP_VX = 0.5`
+  - `yaw_rate = clamp(KP_YAW × -target_y_, ±1.0)` — `KP_YAW = 1.2`
+  - `vx = clamp(KP_VX × (target_x_ - DESIRED_DISTANCE), ±0.5)` — `KP_VX = 0.5`, `DESIRED_DISTANCE = 0.5m`
 
 #### `setpoint_validation_node` ✓ DONE
 Validates and clamps setpoints before FCU.
@@ -199,14 +201,53 @@ State machine controlling mission phases.
 ---
 
 ### `drone_bringup` ✓ DONE
-**Launch file:** `launch/mock_chain.launch.py`
-Starts: `mock_fcu_node`, `mock_target_node`, `world_model_node`, `mission_manager_node`, `follow_controller_node`, `setpoint_validation_node`
+Three launch files:
+
+| Launch file | What it starts | When to use |
+|---|---|---|
+| `mock_chain.launch.py` | mock_fcu + mock_target + world_model + mission + control | Fully mocked — no hardware or camera needed |
+| `fake_video_chain.launch.py` | fake_camera_driver + full perception pipeline + fcu_bridge + world_model + mission + control | Real perception with fake camera (webcam streamed from Mac), real or SITL FC |
+| `real_chain.launch.py` | fcu_bridge + mock_target + world_model + mission + control | Real FC, mocked perception |
 
 ---
 
-### `drone_perception` — EMPTY
-Will contain full perception pipeline. Old test code in `drone_vision` removed.
-`mock_target_node` in `drone_state` replaces `target_estimator_node` during testing.
+### `drone_perception` — 🔧 IN PROGRESS
+Full perception pipeline implemented. Uses **MediaPipe Pose** (not Haar Cascade) — detects persons by shoulder landmarks.
+
+**Nodes (all in package `drone_perception`):**
+
+#### `camera_driver_node` ✓ (C++)
+Reads Pi Camera via OpenCV (`/dev/video0`) @ 30fps.
+- **Publishes:** `/camera/image_raw` (sensor_msgs/Image)
+
+#### `fake_camera_driver_node` ✓ (Python) — MAC ONLY WORKAROUND
+For development on Mac without Pi Camera or Gazebo. Connects via TCP socket to `host.docker.internal:8485` and streams webcam frames from the Mac into Docker.
+- **Publishes:** `/camera/image_raw` (sensor_msgs/Image) @ ~30fps
+- **NOT used on Linux** — on Linux, Gazebo provides the camera via `ros_gz_bridge`
+
+#### `image_preprocessing_node` ✓ (C++)
+Preprocesses raw camera frames before detection.
+- **Subscribes:** `/camera/image_raw`
+- **Publishes:** `/camera/image_preprocessed`
+
+#### `person_detector_node` ✓ (Python — MediaPipe)
+Detects person using MediaPipe Pose. Uses left/right shoulder landmarks to compute bounding box center and shoulder width.
+- **Subscribes:** `/camera/image_preprocessed`
+- **Publishes:** `/target/detections` (Detection)
+- **Logic:** shoulder midpoint → `bbox_center_x/y`; shoulder pixel width → `shoulder_width_px`; confidence fixed at 0.9 when detected
+
+#### `person_tracker_node` ✓ (C++)
+EMA (exponential moving average) smoothing of detections. Alpha = 0.3.
+- **Subscribes:** `/target/detections` (Detection)
+- **Publishes:** `/target/track` (Track)
+
+#### `target_estimator_node` ✓ (C++)
+Converts track to `TargetState` using pinhole camera geometry.
+- **Subscribes:** `/target/track` (Track)
+- **Publishes:** `/target/state` (TargetState)
+- **Logic:**
+  - `distance = (known_shoulder_width × focal_length) / shoulder_width_px` — known_shoulder=0.45m, focal=600px, image_width=640px
+  - `yaw_error = (center_x - 0.5) × 2.0` — normalized [-1, 1]
 
 ### `drone_safety` — EMPTY
 Will contain: `safety_supervision_node`, `hold_failsafe_node`
@@ -217,12 +258,12 @@ Will contain: `safety_supervision_node`, `hold_failsafe_node`
 
 ### Perception pipeline (drone_perception)
 ```
-Pi Camera (hardware)
-  → camera_driver_node          → /camera/image_raw
-  → image_preprocessing_node    → /camera/image_preprocessed
-  → face_detector_node          → /target/detections
-  → face_tracker_node           → /target/track
-  → target_estimator_node       → /target/state
+Pi Camera (hardware) OR fake_camera_driver_node (webcam via TCP from Mac)
+  → camera_driver_node / fake_camera_driver_node  → /camera/image_raw
+  → image_preprocessing_node                       → /camera/image_preprocessed
+  → person_detector_node (MediaPipe Pose)          → /target/detections  (Detection)
+  → person_tracker_node (EMA smoother, C++)        → /target/track       (Track)
+  → target_estimator_node (pinhole geometry, C++)  → /target/state       (TargetState)
 ```
 
 ### State layer (drone_state)
@@ -323,10 +364,10 @@ mock_fcu_node  ← /control/setpoint_validated
 
 | Phase | Focus | Contents |
 |---|---|---|
-| 1 | ✓ Packages + interfaces + skeleton | drone_interfaces (4 msgs), package shells |
+| 1 | ✓ Packages + interfaces + skeleton | drone_interfaces (6 msgs), package shells |
 | 2 | ✓ Mock chain | mock_fcu ✓, world_model ✓, mission_manager ✓, follow_controller ✓, setpoint_validation ✓, mock_target ✓ |
-| 3 | ✓ Launch + FC integration | mock_chain.launch.py ✓, fcu_bridge_node (in progress) |
-| 4 | Perception | camera_driver, image_preprocess, face_detector, face_tracker, target_estimator |
+| 3 | ✓ Launch + FC integration | mock_chain.launch.py ✓, real_chain.launch.py ✓, fcu_bridge_node (in progress) |
+| 4 | 🔧 Perception | fake_camera_driver ✓, camera_driver ✓, image_preprocess ✓, person_detector ✓, person_tracker ✓, target_estimator ✓, fake_video_chain.launch.py ✓ |
 | 5 | Safety | safety_supervision_node, hold_failsafe_node |
 
 ---
@@ -335,19 +376,113 @@ mock_fcu_node  ← /control/setpoint_validated
 
 | Component | Package | Status |
 |---|---|---|
-| 4 custom messages | drone_interfaces | ✓ Done |
+| 6 custom messages | drone_interfaces | ✓ Done |
 | `mock_fcu_node` | drone_state | ✓ Done |
-| `vision_node` | drone_vision | ✓ Done |
+| `vision_node` | drone_vision | ✓ Done (legacy) |
 | `world_model_node` | drone_state | ✓ Done |
 | `mock_target_node` | drone_state | ✓ Done |
 | `mission_manager_node` | drone_behavior | ✓ Done |
 | `follow_controller_node` | drone_control | ✓ Done |
 | `setpoint_validation_node` | drone_control | ✓ Done |
-| Launch file (mock chain) | drone_bringup | ✓ Done |
+| Launch files (mock/fake/real chain) | drone_bringup | ✓ Done |
+| `camera_driver_node` | drone_perception | ✓ Done |
+| `fake_camera_driver_node` | drone_perception | ✓ Done |
+| `image_preprocessing_node` | drone_perception | ✓ Done |
+| `person_detector_node` (MediaPipe) | drone_perception | ✓ Done |
+| `person_tracker_node` (EMA) | drone_perception | ✓ Done |
+| `target_estimator_node` (pinhole) | drone_perception | ✓ Done |
 | `fcu_bridge_node` | drone_state | 🔧 In progress |
 | `safety_supervision_node` | drone_safety | ✗ Not started |
 | `hold_failsafe_node` | drone_safety | ✗ Not started |
-| Full perception pipeline | drone_perception | ✗ Not started |
+
+---
+
+## Gazebo + ArduPilot SITL Setup
+
+Full simulation stack: **Gazebo Harmonic** (physics + visuals) + **ArduPilot SITL** (flight controller) + **MAVROS** (ROS ↔ MAVLink) + **ROS stack**.
+
+**Platform: Linux** — the whole reason for switching from Mac. On Linux, Gazebo runs natively alongside Docker/ROS without TCP webcam hacks.
+
+**Prerequisites (installed on Linux host, outside Docker):**
+- `~/ardupilot/` — ArduPilot source with SITL (`sim_vehicle.py`)
+- `~/ardupilot_gazebo/` — ArduPilot Gazebo plugin (built to `~/ardupilot_gazebo/build/`)
+- Gazebo Harmonic (`gz sim`)
+
+**Architecture:**
+```
+Gazebo (physics + simulated camera)
+  ↔ ArduPilot SITL (flight dynamics)
+  ↔ TCP:5770 ↔ MAVROS (in Docker) ↔ fcu_bridge_node → /vehicle/status, /vehicle/odom
+
+Gazebo camera plugin
+  → ros_gz_bridge → /camera/image_raw
+  → image_preprocessing_node → person_detector_node → person_tracker_node → target_estimator_node
+  → /target/state → world_model_node → mission_manager → follow_controller → fcu_bridge_node → SITL
+```
+**Key point:** Gazebo provides the camera — NO fake TCP webcam stream needed. `fake_camera_driver_node` is a Mac-only workaround and NOT used on Linux.
+
+### Startup sequence (6 terminals — use tmux)
+
+**Step 1 — Kill leftover processes** (always run first):
+```bash
+kill $(lsof -t -i :5770) 2>/dev/null; kill $(lsof -t -i :5760) 2>/dev/null; kill $(lsof -t -i :9002) 2>/dev/null; killall arducopter 2>/dev/null
+```
+
+**Step 2 — Start Gazebo server** (headless, no GUI):
+```bash
+unset GZ_SIM_SYSTEM_PLUGIN_PATH && unset GZ_SIM_RESOURCE_PATH && \
+export GZ_SIM_SYSTEM_PLUGIN_PATH=$HOME/ardupilot_gazebo/build && \
+export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds && \
+export GZ_PARTITION=drone_sim && \
+gz sim -v4 -s -r ~/ardupilot_gazebo/worlds/iris_warehouse.sdf
+```
+
+**Step 3 — Start Gazebo GUI** (separate terminal, same env vars):
+```bash
+unset GZ_SIM_SYSTEM_PLUGIN_PATH && unset GZ_SIM_RESOURCE_PATH && \
+export GZ_SIM_SYSTEM_PLUGIN_PATH=$HOME/ardupilot_gazebo/build && \
+export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds && \
+export GZ_PARTITION=drone_sim && \
+gz sim -v4 -g
+```
+
+**Step 4 — Start ArduPilot SITL** (connects to Gazebo via JSON):
+```bash
+cd ~/ardupilot && sim_vehicle.py -v ArduCopter -f gazebo-iris --model JSON --console \
+  --out tcpin:0.0.0.0:5770
+```
+> SITL listens on TCP port 5770 — Docker will connect to this.
+
+**Step 5 — Start Docker + MAVROS** (on Linux, use `172.17.0.1` or `host.docker.internal` depending on distro):
+```bash
+cd /Users/fares/Desktop/Drone/Drone/software && docker compose up -d && \
+docker exec -it drone_ros2 bash -c \
+  'cd /workspaces/drone_ws && source install/setup.bash && \
+   ros2 launch mavros apm.launch fcu_url:=tcp://host.docker.internal:5770'
+```
+
+**Step 5b — Start ros_gz_bridge** (bridges Gazebo camera into ROS `/camera/image_raw`):
+```bash
+# Inside Docker or on host (TBD depending on setup)
+ros2 run ros_gz_bridge parameter_bridge /camera@sensor_msgs/msg/Image[gz.msgs.Image
+```
+> This is the bridge that makes Gazebo camera feed available to the perception pipeline. Topic name may differ depending on Gazebo world/camera plugin config.
+
+**Step 6 — Start ROS stack** (new terminal, inside Docker):
+```bash
+docker exec -it drone_ros2 bash
+# Inside container:
+cd /workspaces/drone_ws && source install/setup.bash && ros2 launch drone_bringup real_chain.launch.py
+```
+
+### Port mapping
+| Port | Protocol | What |
+|---|---|---|
+| 5770 | TCP | SITL ↔ MAVROS (primary link) |
+| 5760 | TCP | SITL default (not used in this setup) |
+| 9002 | UDP | Gazebo ↔ SITL (JSON plugin) |
+
+> Docker connects **out** to `host.docker.internal:5770` — no inbound port mapping needed in compose.yml for this.
 
 ---
 
@@ -423,9 +558,10 @@ mock_fcu_node  ← /control/setpoint_validated
 2. ✓ Implement `follow_controller_node` in `drone_control`
 3. ✓ Implement `setpoint_validation_node` in `drone_control`
 4. ✓ Implement `mock_target_node` in `drone_state`
-5. ✓ Create launch file in `drone_bringup`
-6. Implement `fcu_bridge_node` using ArduPilot + MAVROS ← in progress
-7. Implement `safety_supervision_node` and `hold_failsafe_node` in `drone_safety`
-8. Build out `drone_perception` with full camera pipeline
-9. Replace hardcoded paths with ROS parameters
-10. Move haarcascade to `models/` directory
+5. ✓ Create launch files in `drone_bringup` (mock, fake_video, real)
+6. ✓ Build out `drone_perception` with full camera pipeline (MediaPipe Pose)
+7. Finish `fcu_bridge_node` using ArduPilot + MAVROS ← next
+8. Test `fake_video_chain.launch.py` end-to-end (fake camera → perception → control)
+9. Implement `safety_supervision_node` and `hold_failsafe_node` in `drone_safety`
+10. Replace hardcoded paths with ROS parameters
+11. Move haarcascade to `models/` directory (low priority)

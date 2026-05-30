@@ -17,6 +17,7 @@ find_package(OpenCV REQUIRED)
 # Python nodes. Keep MediaPipe in Python; camera/preprocess/tracking/estimation stay C++.
 install(PROGRAMS
   drone_perception/person_detector_node.py
+  drone_perception/fake_camera_driver_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -27,15 +28,17 @@ ament_target_dependencies(camera_driver_node rclcpp sensor_msgs cv_bridge OpenCV
 add_executable(image_preprocessing_node src/image_preprocessing_node.cpp)
 ament_target_dependencies(image_preprocessing_node rclcpp sensor_msgs cv_bridge OpenCV)
 
-# add_executable(person_tracker_node src/person_tracker_node.cpp)
-# ament_target_dependencies(person_tracker_node rclcpp sensor_msgs drone_interfaces)
+add_executable(person_tracker_node src/person_tracker_node.cpp)
+ament_target_dependencies(person_tracker_node rclcpp sensor_msgs drone_interfaces)
 
-# add_executable(target_estimator_node src/target_estimator_node.cpp)
-# ament_target_dependencies(target_estimator_node rclcpp sensor_msgs drone_interfaces geometry_msgs)
+add_executable(target_estimator_node src/target_estimator_node.cpp)
+ament_target_dependencies(target_estimator_node rclcpp sensor_msgs drone_interfaces geometry_msgs)
 
 install(TARGETS
   camera_driver_node
   image_preprocessing_node
+  person_tracker_node
+  target_estimator_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
