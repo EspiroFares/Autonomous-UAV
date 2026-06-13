@@ -19,11 +19,16 @@ DIY indoor **face-following drone** using ROS 2 (Jazzy) on a Raspberry Pi 4 comp
 | Downward Lidar/Rangefinder | Flight Controller | Hover/altitude — stays on FC |
 | Flight Controller | FC hardware | Stabilisation, hover, motor control |
 
-**New FC has arrived (ArduPilot). The drone can hover in place.** FC connected to Raspberry Pi via USB (`/dev/ttyACM0`). Mock chain verified end-to-end. Writing `fcu_bridge_node` via MAVROS now.
+**New FC has arrived (ArduPilot). The drone can hover in place.** FC connected to Raspberry Pi via UART (`/dev/ttyAMA5`). MAVLink connection established and verified. Writing `fcu_bridge_node` via MAVROS now.
 
-**FC connection:** USB (temporary during development — UART via GPIO pins planned for final deployment to avoid vibration issues).
+**FC connection:** UART via GPIO (`/dev/ttyAMA5`, baudrate 921600) — final deployment connection, not USB.
 **FC protocol:** MAVLink 2 via MAVROS.
 **ArduPilot mode needed:** GUIDED (for velocity commands from ROS).
+
+**MAVLink connection verified with:**
+```bash
+python3 -m MAVProxy.mavproxy --master=/dev/ttyAMA5 --baudrate=921600
+```
 
 **Raspberry Pi runs:** perception, world model, mission logic, control, safety — all high-level.
 **Raspberry Pi OS:** Raspberry Pi OS 64-bit, running ROS 2 in Docker.
