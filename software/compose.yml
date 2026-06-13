@@ -9,7 +9,7 @@ services:
     working_dir: /workspaces/drone_ws
     privileged: true
     devices:
-      - /dev/ttyACM0:/dev/ttyACM0  
+      - /dev/ttyAMA5:/dev/ttyAMA5
     volumes:
       - ./drone_ws:/workspaces/drone_ws
     ports:
