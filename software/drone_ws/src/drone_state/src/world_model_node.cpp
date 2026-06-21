@@ -61,7 +61,7 @@ private:
   }
 
   void PublishWorldState() {
-    if (!has_vehicle_status_ || !has_vehicle_odom_ || !has_target_) {
+    if (!has_vehicle_status_ || !has_target_) {
       return;
     }
 
