@@ -61,7 +61,7 @@ class FcuBridgeNode : public rclcpp::Node {
             drone_interfaces::msg::VehicleStatus status;
             status.connected = msg->connected;
             status.armed = msg->armed;
-            status.offboard_ready = (msg->mode == "GUIDED" && msg->connected);
+            status.offboard_ready = msg->guided && msg->connected; 
             status.mode = msg->mode;
             status.hovering = false;
             vehicle_status_pub_->publish(status);
@@ -77,13 +77,6 @@ class FcuBridgeNode : public rclcpp::Node {
 
         void Update() {
             //Initialte GUIDED mode
-            if (connected_ && current_mode_ != "GUIDED") {
-                auto request = std::make_shared<mavros_msgs::srv::SetMode::Request>();
-                request->custom_mode = "GUIDED";
-                set_mode_client_->async_send_request(request);
-                RCLCPP_INFO(this->get_logger(), "Reqeuesting GUIDED mode.........");
-            }
-
             geometry_msgs::msg::Twist cmd;
 
             if (last_setpoint_.hold || !armed_) {
