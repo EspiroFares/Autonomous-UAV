@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/7d0be21c-c6fa-4e51-9add-62b9557a809c
+
 # Indoor Face-Following Drone
 
 ROS 2-based autonomy stack for a DIY indoor drone built around a Raspberry Pi 4 companion computer and a separate ArduPilot flight controller.
