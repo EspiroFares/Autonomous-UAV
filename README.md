@@ -76,6 +76,20 @@ control logic, and back down to the flight controller — crossing the hardware 
 ### ROS 2 node / topic graph
 ![ROS 2 Architecture](docs/architecture/ROS_architecture.drawio-3.png)
 
+This is what makes the sim-to-real claim real: a bug caught in SITL is a bug that would have happened on the
+drone.
+
+> **Demo — full autonomy stack in Gazebo + ArduPilot SITL.** The complete perception → mission → follow
+> loop running against the simulated quadcopter. Work in progress; the on-hardware port is the next milestone.
+
+
+https://github.com/user-attachments/assets/931f9e90-d432-4f46-a7b8-8be1f02cf99d
+
+
+
+
+---
+
 ### Design principles (fixed from day one)
 
 | # | Principle | Why it matters |
