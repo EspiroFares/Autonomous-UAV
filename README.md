@@ -134,7 +134,9 @@ drone.
 > loop running against the simulated quadcopter. Work in progress; the on-hardware port is the next milestone.
 
 
-https://github.com/user-attachments/assets/931f9e90-d432-4f46-a7b8-8be1f02cf99d
+
+https://github.com/user-attachments/assets/22fade36-4afa-4486-8f35-493470875aa7
+
 
 
 ---
