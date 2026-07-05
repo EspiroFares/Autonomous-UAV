@@ -4,8 +4,6 @@
 
 DIY indoor **face-following drone** using ROS 2 (Jazzy) on a Raspberry Pi 4 companion computer. The companion computer runs all autonomy logic; a separate Flight Controller handles low-level stabilization and hover. The stack is developed and tested in Docker, targeting deployment on real hardware.
 
-**Goal:** Strong enough for GitHub, CV, interviews, and eventual report/presentation.
-
 **Current milestone:** "Moved to Linux — running full Gazebo simulation with simulated camera feeding into real perception pipeline (MediaPipe) via ros_gz_bridge"
 
 ---
