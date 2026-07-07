@@ -9,7 +9,7 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from drone_interfaces.msg import Detection
 import mediapipe as mp
-
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 class PersonDetectorNode(Node):
     def __init__(self):
@@ -23,11 +23,13 @@ class PersonDetectorNode(Node):
             10,
         )
 
+        qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+        )
         self.sub = self.create_subscription(
-            Image,
-            "/camera/image_preprocessed",
-            self.on_image,
-            10,
+            Image, "/camera/image_preprocessed", self.on_image, qos
         )
 
         self.pose = mp.solutions.pose.Pose(
