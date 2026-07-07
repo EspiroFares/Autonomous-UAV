@@ -12,7 +12,8 @@ find_package(std_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(drone_interfaces REQUIRED)
-find_package(mavros_msgs REQUIRED)   
+find_package(mavros_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)   
 
 add_executable(mock_fcu_node src/mock_fcu_node.cpp)
 
@@ -43,10 +44,12 @@ drone_interfaces
 add_executable(fcu_bridge_node src/fcu_bridge_node.cpp)
 
 ament_target_dependencies(fcu_bridge_node                   
-    rclcpp                                       
-    nav_msgs                                                
-    geometry_msgs                                           
-    drone_interfaces                             
+    rclcpp
+    std_msgs
+    sensor_msgs
+    nav_msgs
+    geometry_msgs
+    drone_interfaces
     mavros_msgs     
   )          
 

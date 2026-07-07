@@ -6,13 +6,14 @@
 #include "drone_interfaces/msg/track.hpp"
 
 
+
 class PersonTrackerNode : public rclcpp::Node {
 public:
     PersonTrackerNode() : Node("person_tracker_node"),
     track_id_(0),
     cx_(0.0f), cy_(0.0f),
     width_(0.0f), height_(0.0f),
-    alpha_(0.3f)
+    alpha_(0.6f)
     {
         sub_ = this->create_subscription<drone_interfaces::msg::Detection>("/target/detections", 10, std::bind(&PersonTrackerNode::on_detection, this, std::placeholders::_1));
     
