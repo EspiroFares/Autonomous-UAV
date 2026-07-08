@@ -21,7 +21,7 @@ class FcuBridgeNode : public rclcpp::Node {
     Node("fcu_bridge_node"),
     armed_(false),
     connected_(false),
-    current_mode_("")
+    current_mode_(""),
     has_setpoint_(false)
     {
 
