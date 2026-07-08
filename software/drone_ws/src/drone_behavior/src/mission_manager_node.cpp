@@ -42,11 +42,16 @@
         RCLCPP_INFO(this->get_logger(), "mission_manager_node started");
 
         last_valid_time_ = this->now();
+        last_world_time_ = this->now();
+
     }
 
     private:
         void TargetValidCallback(const std_msgs::msg::Bool::SharedPtr msg){
             target_valid_ = msg->data;
+            last_world_time_ = this->now();
+
+
             if (msg->data) {
                 last_valid_time_ = this->now();
             }
@@ -57,6 +62,9 @@
         }
         void Update() {
             MissionState next_state = state_;
+            if ((this->now() - last_world_time_).seconds() > 0.5) {
+                target_valid_ = false;
+            }
 
             switch(state_) {
                 case MissionState::IDLE:
@@ -138,6 +146,8 @@
         rclcpp::TimerBase::SharedPtr timer_;
 
         rclcpp::Time last_valid_time_;
+
+        rclcpp::Time last_world_time_;
                                                         
         MissionState state_;
         bool target_valid_;
