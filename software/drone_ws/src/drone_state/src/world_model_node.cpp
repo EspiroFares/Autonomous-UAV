@@ -94,12 +94,9 @@ private:
       pos_msg.x = last_target_state_.distance_estimate * std::cos(last_target_state_.yaw_error);
       pos_msg.y = last_target_state_.distance_estimate * std::sin(last_target_state_.yaw_error);
       pos_msg.z = 0.0;
-    } else {
-      pos_msg.x = 0.0;
-      pos_msg.y = 0.0;
-      pos_msg.z = 0.0;
-    }
-    target_pos_relative_pub_->publish(pos_msg);
+      target_pos_relative_pub_->publish(pos_msg);
+
+    } 
   }
 
   // Subscribers
