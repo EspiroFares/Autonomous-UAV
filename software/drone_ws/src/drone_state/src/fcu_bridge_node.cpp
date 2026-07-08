@@ -22,6 +22,7 @@ class FcuBridgeNode : public rclcpp::Node {
     armed_(false),
     connected_(false),
     current_mode_("")
+    has_setpoint_(false)
     {
 
         //MAVROS subs — must match MAVROS publisher QoS (BEST_EFFORT)
@@ -86,13 +87,18 @@ class FcuBridgeNode : public rclcpp::Node {
 
         void SetpointCallback(const drone_interfaces::msg::ControlSetpoint::SharedPtr msg) {
             last_setpoint_ = *msg;
+            last_setpoint_time_ = this->now();
+            has_setpoint_ = true;
         }
 
         void Update() {
             //Initialte GUIDED mode
             geometry_msgs::msg::Twist cmd;
 
-            if (last_setpoint_.hold || !armed_) {
+            bool setpoint_fresh = has_setpoint_ &&
+            (this->now() - last_setpoint_time_).seconds() < 0.5;
+
+            if (last_setpoint_.hold || !armed_ || !setpoint_fresh) {
                 cmd.linear.x  = 0.0;
                 cmd.linear.y  = 0.0;
                 cmd.linear.z  = 0.0;
@@ -118,9 +124,15 @@ class FcuBridgeNode : public rclcpp::Node {
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr vehicle_odom_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr vehicle_height_pub_;
 
+    
+
     rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    rclcpp::Time last_setpoint_time_;
+    
+
+    bool has_setpoint_;
     bool armed_;
     bool connected_;
     std::string current_mode_;

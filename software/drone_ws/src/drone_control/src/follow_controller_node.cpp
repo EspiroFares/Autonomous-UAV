@@ -34,33 +34,46 @@ class FollowControllerNode : public rclcpp::Node {
             timer_ = this->create_wall_timer(100ms, std::bind(&FollowControllerNode::Update, this));
 
              RCLCPP_INFO(this->get_logger(), "follow_controller_node started");
+
+            last_pos_time_ = this->now();
+            last_height_time_ = this->now();
+            last_follow_time_ = this->now();
     }
 
     private:
         void FollowEnabledCallback(const std_msgs::msg::Bool::SharedPtr msg){
             follow_enabled_ = msg->data;
+            last_follow_time_ = this->now();
         }
 
         void TargetPosCallback(const geometry_msgs::msg::Point::SharedPtr msg) {
             target_x_ = msg->x;
             target_y_ = msg->y;
+            last_pos_time_ = this->now();
         }
         //(void)msg just for now
        void HeightCallback(const std_msgs::msg::Float32::SharedPtr msg){
             current_z_ = msg->data;
             has_odom_ = true;
+            last_height_time_ = this->now();
         }
 
         void Update() {
             drone_interfaces::msg::ControlSetpoint setpoint;
 
-            if (!follow_enabled_) {
+            bool pos_fresh    = (this->now() - last_pos_time_).seconds() < 0.5;
+            bool height_fresh = has_odom_ && (this->now() - last_height_time_).seconds() < 0.5;
+            bool follow_fresh = (this->now() - last_follow_time_).seconds() < 0.5;
+
+            bool follow_ok = follow_enabled_ && follow_fresh && pos_fresh;
+
+            if (!follow_ok) {
                 setpoint.vx = 0.0;
                 setpoint.vy = 0.0;
                 setpoint.yaw_rate = 0.0;
 
                 double vz = 0.0;
-                if (has_odom_) {
+                if (height_fresh) {
                     double z_error = 1.5 - current_z_;
                     vz = std::clamp(0.8 * z_error, -0.2, 0.2);
                     setpoint.hold = false;
@@ -94,7 +107,7 @@ class FollowControllerNode : public rclcpp::Node {
             double dist = std::sqrt(target_x_ * target_x_ + target_y_ * target_y_);
             double vx = 0.0;
             double vz = 0.0;
-            if (has_odom_) {
+            if (height_fresh) {
                 double z_error = DESIRED_ALTITUDE - current_z_;
                 vz = std::clamp(KP_Z * z_error, -MAX_VZ, MAX_VZ);
             }
@@ -123,11 +136,16 @@ class FollowControllerNode : public rclcpp::Node {
 
         rclcpp::TimerBase::SharedPtr timer_;
 
+        rclcpp::Time last_pos_time_;
+        rclcpp::Time last_height_time_;
+        rclcpp::Time last_follow_time_;
+
         bool follow_enabled_;
         double target_x_;
         double target_y_;
         double current_z_;
         bool has_odom_;
+        
 
 };
 
