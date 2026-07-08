@@ -18,7 +18,6 @@ find_package(OpenCV REQUIRED)
 install(PROGRAMS
   drone_perception/camera_driver_node.py
   drone_perception/person_detector_node.py
-  drone_perception/fake_camera_driver_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
