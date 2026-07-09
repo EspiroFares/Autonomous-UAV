@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 SESSION=drone
 ENV='export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp; source /opt/ros/jazzy/setup.bash; source ~/Autonomous-UAV/software/drone_ws/install/setup.bash'
 
@@ -50,6 +51,15 @@ ros2 topic echo /vehicle/height" C-m
 tmux send-keys -t $SESSION:monitor.1 "$ENV; sleep 18; ros2 topic echo /mavros/setpoint_velocity/cmd_vel_unstamped" C-m
 
 tmux send-keys -t $SESSION:monitor.2 "$ENV; echo 'Fri shell - t.ex: ros2 param set /follow_controller_node kff 0.7'" C-m
+
+# Pane 3: automatisk flygloggning (rosbag)
+tmux split-window -t $SESSION:monitor.2 -v
+tmux send-keys -t $SESSION:monitor.3 "$ENV; mkdir -p ~/flight_logs; sleep 20; \
+ros2 bag record -o ~/flight_logs/flight_\$(date +%Y%m%d_%H%M%S) \
+/target/detections /target/track /target/state /world/target_valid \
+/world/target_pos_relative /mission/state /mission/follow_enabled \
+/control/setpoint_raw /control/setpoint_validated \
+/mavros/setpoint_velocity/cmd_vel_unstamped /vehicle/height /vehicle/status /mavros/state" C-m
 
 tmux select-window -t $SESSION:monitor
 tmux attach -t $SESSION
