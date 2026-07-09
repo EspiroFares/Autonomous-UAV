@@ -46,6 +46,9 @@ tmux split-window -t $SESSION:monitor.0 -v
 tmux send-keys -t $SESSION:monitor.0 "$ENV; echo 'Vantar 15s pa MAVROS...'; sleep 15; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 132, message_rate: 20.0}'; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 173, message_rate: 20.0}'; \
+ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 74, message_rate: 10.0}'; \
+ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 147, message_rate: 2.0}'; \
+ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 30, message_rate: 10.0}'; \
 ros2 topic echo /vehicle/height" C-m
 
 tmux send-keys -t $SESSION:monitor.1 "$ENV; sleep 18; ros2 topic echo /mavros/setpoint_velocity/cmd_vel_unstamped" C-m
