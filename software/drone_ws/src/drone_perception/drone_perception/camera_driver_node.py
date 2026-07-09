@@ -26,6 +26,7 @@ class CameraDriverNode(Node):
 
     def capture(self):
         frame = self.picam.capture_array()
+        frame = frame[:, :, ::-1] 
         msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")
         msg.header.stamp = self.get_clock().now().to_msg()
         self.pub.publish(msg)

@@ -59,7 +59,8 @@ ros2 bag record -o ~/flight_logs/flight_\$(date +%Y%m%d_%H%M%S) \
 /target/detections /target/track /target/state /world/target_valid \
 /world/target_pos_relative /mission/state /mission/follow_enabled \
 /control/setpoint_raw /control/setpoint_validated \
-/mavros/setpoint_velocity/cmd_vel_unstamped /vehicle/height /vehicle/status /mavros/state" C-m
+/mavros/setpoint_velocity/cmd_vel_unstamped /vehicle/height /vehicle/status /mavros/state \
+/mavros/vfr_hud /mavros/battery /mavros/imu/data" C-m
 
 tmux select-window -t $SESSION:monitor
 tmux attach -t $SESSION
