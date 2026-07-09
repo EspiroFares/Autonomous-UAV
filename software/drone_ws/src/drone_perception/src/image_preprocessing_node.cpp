@@ -8,9 +8,15 @@
 class ImagePreprocessingNode : public rclcpp::Node {
 public:
     ImagePreprocessingNode() : Node("image_preprocessing_node") {
-        sub_ = this->create_subscription<sensor_msgs::msg::Image>("/camera/image_raw", 10, std::bind(&ImagePreprocessingNode::on_image, this, std::placeholders::_1));
+        auto qos = rclcpp::QoS(1).best_effort();
 
-        pub_ = this->create_publisher<sensor_msgs::msg::Image>("/camera/image_preprocessed", 10);
+        sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+            "/camera/image_raw", qos,
+            std::bind(&ImagePreprocessingNode::on_image, this, std::placeholders::_1));
+
+        pub_ = this->create_publisher<sensor_msgs::msg::Image>(
+            "/camera/image_preprocessed", qos);
+
 
         RCLCPP_INFO(this->get_logger(), "image_preprocessing_node started");
     }

@@ -1,19 +1,17 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>drone_vision</name>
+  <name>drone_safety</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Safety supervision and hold failsafe - can veto any setpoint</description>
   <maintainer email="faresespiro535@gmail.com">fares</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
-  <depend>sensor_msgs</depend>
-  <depend>cv_bridge</depend>
-  <depend>image_transport</depend>
-  <depend>opencv2</depend>
+  <depend>std_msgs</depend>
+  <depend>drone_interfaces</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
