@@ -21,7 +21,7 @@ class CameraDriverNode(Node):
         self.picam.configure(config)
         self.picam.start()
 
-        self.timer = self.create_timer(1.0 / 30.0, self.capture)
+        self.timer = self.create_timer(1.0 / 15.0, self.capture)
         self.get_logger().info("camera_driver_node started (picamera2)")
 
     def capture(self):

@@ -41,11 +41,20 @@
 
         RCLCPP_INFO(this->get_logger(), "mission_manager_node started");
 
+        last_valid_time_ = this->now();
+        last_world_time_ = this->now();
+
     }
 
     private:
         void TargetValidCallback(const std_msgs::msg::Bool::SharedPtr msg){
             target_valid_ = msg->data;
+            last_world_time_ = this->now();
+
+
+            if (msg->data) {
+                last_valid_time_ = this->now();
+            }
         }
         void TargetPosCallback(const geometry_msgs::msg::Point::SharedPtr msg) {
             target_pos_x_ = msg->x;
@@ -53,6 +62,9 @@
         }
         void Update() {
             MissionState next_state = state_;
+            if ((this->now() - last_world_time_).seconds() > 0.5) {
+                target_valid_ = false;
+            }
 
             switch(state_) {
                 case MissionState::IDLE:
@@ -75,7 +87,8 @@
                     break;
 
                 case MissionState::FOLLOWING:
-                    if (!target_valid_) {
+                    if (!target_valid_ &&
+                        (this->now() - last_valid_time_).seconds() > 1.0) {
                         next_state = MissionState::TARGET_LOST;
                     }
                     break;
@@ -131,11 +144,16 @@
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr follow_enabled_pub_;
                                                         
         rclcpp::TimerBase::SharedPtr timer_;
+
+        rclcpp::Time last_valid_time_;
+
+        rclcpp::Time last_world_time_;
                                                         
         MissionState state_;
         bool target_valid_;
         double target_pos_x_;
         double target_pos_y_;
+        
 
   };
 

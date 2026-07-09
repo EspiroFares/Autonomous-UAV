@@ -48,6 +48,7 @@ private:
   void VehicleStatusCallback(const drone_interfaces::msg::VehicleStatus::SharedPtr msg) {
     last_vehicle_status_ = *msg;
     has_vehicle_status_ = true;
+    last_status_time_ = this->now();
   }
 
   void VehicleOdomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
@@ -58,20 +59,27 @@ private:
   void TargetStateCallback(const drone_interfaces::msg::TargetState::SharedPtr msg) {
     last_target_state_ = *msg;
     has_target_ = true;
+    last_target_time_ = this->now();
   }
 
   void PublishWorldState() {
+
+    
+
     if (!has_vehicle_status_ || !has_target_) {
       return;
     }
+
+    bool target_fresh = (this->now() - last_target_time_).seconds() < 0.5;
+    bool status_fresh = (this->now() - last_status_time_).seconds() < 0.5;
 
     bool vehicle_ready = last_vehicle_status_.connected &&
                          last_vehicle_status_.armed &&
                          last_vehicle_status_.offboard_ready;
 
-    bool target_valid = vehicle_ready &&
-                        last_target_state_.detected &&
-                        last_target_state_.confidence >= confidence_threshold_;
+    bool target_valid = vehicle_ready && status_fresh && target_fresh &&
+                    last_target_state_.detected &&
+                    last_target_state_.confidence >= confidence_threshold_;
 
     // Publish target validity
     std_msgs::msg::Bool valid_msg;
@@ -86,12 +94,9 @@ private:
       pos_msg.x = last_target_state_.distance_estimate * std::cos(last_target_state_.yaw_error);
       pos_msg.y = last_target_state_.distance_estimate * std::sin(last_target_state_.yaw_error);
       pos_msg.z = 0.0;
-    } else {
-      pos_msg.x = 0.0;
-      pos_msg.y = 0.0;
-      pos_msg.z = 0.0;
-    }
-    target_pos_relative_pub_->publish(pos_msg);
+      target_pos_relative_pub_->publish(pos_msg);
+
+    } 
   }
 
   // Subscribers
@@ -104,6 +109,9 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Point>::SharedPtr target_pos_relative_pub_;
 
   rclcpp::TimerBase::SharedPtr timer_;
+  
+  rclcpp::Time last_target_time_;
+  rclcpp::Time last_status_time_;
 
   // Latest received messages
   drone_interfaces::msg::VehicleStatus last_vehicle_status_;

@@ -3,7 +3,10 @@
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/float32.hpp"
+#include "sensor_msgs/msg/range.hpp"
 #include "mavros_msgs/msg/state.hpp"
+
 #include "mavros_msgs/srv/set_mode.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -18,7 +21,8 @@ class FcuBridgeNode : public rclcpp::Node {
     Node("fcu_bridge_node"),
     armed_(false),
     connected_(false),
-    current_mode_("")
+    current_mode_(""),
+    has_setpoint_(false)
     {
 
         //MAVROS subs — must match MAVROS publisher QoS (BEST_EFFORT)
@@ -27,6 +31,8 @@ class FcuBridgeNode : public rclcpp::Node {
         mavros_state_sub_ = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", mavros_qos, std::bind(&FcuBridgeNode::MavrosStateCallback, this, std::placeholders::_1));
 
         mavros_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/mavros/local_position/odom", mavros_qos, std::bind(&FcuBridgeNode::MavrosOdomCallback, this, std::placeholders::_1));
+
+        rangefinder_sub_ = this->create_subscription<sensor_msgs::msg::Range>("/mavros/rangefinder/rangefinder", mavros_qos,std::bind(&FcuBridgeNode::RangefinderCallback, this, std::placeholders::_1));
 
         //ROS subs
         setpoint_sub_ = this->create_subscription<drone_interfaces::msg::ControlSetpoint>("/control/setpoint_validated", 10, std::bind(&FcuBridgeNode::SetpointCallback, this, std::placeholders::_1));
@@ -39,6 +45,8 @@ class FcuBridgeNode : public rclcpp::Node {
         vehicle_status_pub_ = this->create_publisher<drone_interfaces::msg::VehicleStatus>("/vehicle/status", 10);
 
         vehicle_odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/vehicle/odom", 10);
+
+        vehicle_height_pub_ = this->create_publisher<std_msgs::msg::Float32>("/vehicle/height", 10);
 
 
 
@@ -71,15 +79,26 @@ class FcuBridgeNode : public rclcpp::Node {
             vehicle_odom_pub_->publish(*msg);
         }
 
+        void RangefinderCallback(const sensor_msgs::msg::Range::SharedPtr msg) {
+            std_msgs::msg::Float32 height;
+            height.data = msg->range;
+            vehicle_height_pub_->publish(height);
+        }
+
         void SetpointCallback(const drone_interfaces::msg::ControlSetpoint::SharedPtr msg) {
             last_setpoint_ = *msg;
+            last_setpoint_time_ = this->now();
+            has_setpoint_ = true;
         }
 
         void Update() {
             //Initialte GUIDED mode
             geometry_msgs::msg::Twist cmd;
 
-            if (last_setpoint_.hold || !armed_) {
+            bool setpoint_fresh = has_setpoint_ &&
+            (this->now() - last_setpoint_time_).seconds() < 0.5;
+
+            if (last_setpoint_.hold || !armed_ || !setpoint_fresh) {
                 cmd.linear.x  = 0.0;
                 cmd.linear.y  = 0.0;
                 cmd.linear.z  = 0.0;
@@ -97,14 +116,23 @@ class FcuBridgeNode : public rclcpp::Node {
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr mavros_state_sub_; 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr mavros_odom_sub_;
     rclcpp::Subscription<drone_interfaces::msg::ControlSetpoint>::SharedPtr setpoint_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Range>::SharedPtr rangefinder_sub_;
+
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
     rclcpp::Publisher<drone_interfaces::msg::VehicleStatus>::SharedPtr vehicle_status_pub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr vehicle_odom_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr vehicle_height_pub_;
+
+    
 
     rclcpp::Client<mavros_msgs::srv::SetMode>::SharedPtr set_mode_client_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    rclcpp::Time last_setpoint_time_;
+    
+
+    bool has_setpoint_;
     bool armed_;
     bool connected_;
     std::string current_mode_;
