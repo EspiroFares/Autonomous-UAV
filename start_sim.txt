@@ -1,0 +1,56 @@
+ pkill -f "ros2 launch drone_bringup"
+  pkill -f "ros2 bag record"
+  pkill -f "ros_gz_bridge"
+  pkill -f "rqt_image_view"
+  pkill -f "ros2 topic echo"
+  pkill -f "ros2 launch mavros"
+  pkill -f "mavproxy.py"
+  killall -9 arducopter 2>/dev/null
+  pkill -f "sim_vehicle.py"
+  pkill -f "gz sim"
+
+  Vänta 2 sekunder, sedan verifiera att inget hänger kvar (kolla särskilt efter T-status = stoppad process, som inte dör av vanlig
+  pkill):
+
+  ps aux | grep -iE "gz sim|arducopter|sim_vehicle|mavproxy|mavros_node|ros_gz_bridge|rqt_image_view|sim_chain|ros2 bag" | grep -v grep
+
+  Om något listas kvar med status T (stoppad): kill -9 <PID> på den specifika processen.
+
+  Kontrollera även att portarna är fria:
+  lsof -i :5770 -i :5760 -i :9002
+  (ingen output = fritt. Om något listas: kill -9 <PID> på den processen också.)
+
+  2. Starta om, en terminal/tmux-ruta i taget
+
+  Ruta 1 — Gazebo server:
+  unset GZ_SIM_SYSTEM_PLUGIN_PATH && unset GZ_SIM_RESOURCE_PATH && \
+  export GZ_SIM_SYSTEM_PLUGIN_PATH=$HOME/ardupilot_gazebo/build && \
+  export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds && \
+  export GZ_PARTITION=drone_sim && \
+  gz sim -v4 -s -r ~/ardupilot_gazebo/worlds/iris_warehouse.sdf
+
+  Ruta 2 — Gazebo GUI:
+  unset GZ_SIM_SYSTEM_PLUGIN_PATH && unset GZ_SIM_RESOURCE_PATH && \
+  export GZ_SIM_SYSTEM_PLUGIN_PATH=$HOME/ardupilot_gazebo/build && \
+  export GZ_SIM_RESOURCE_PATH=$HOME/ardupilot_gazebo/models:$HOME/ardupilot_gazebo/worlds && \
+  export GZ_PARTITION=drone_sim && \
+  gz sim -v4 -g
+
+  Ruta 3 — ArduPilot SITL:
+  cd ~/ardupilot && sim_vehicle.py -v ArduCopter -f gazebo-iris --model JSON --console \
+    --out tcpin:0.0.0.0:5770
+  Vänta på EKF3 IMU0 is using GPS i konsolen innan du går vidare.
+
+  Ruta 4 — MAVROS:
+  source /opt/ros/jazzy/setup.bash && source ~/Desktop/Autonomous-UAV/software/drone_ws/install/setup.bash
+  ros2 launch mavros apm.launch fcu_url:=tcp://127.0.0.1:5770
+
+  Ruta 5 — kamerabryggan:
+  source /opt/ros/jazzy/setup.bash
+  ros2 run ros_gz_bridge parameter_bridge \
+    /world/iris_warehouse/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image@sensor_msgs/msg/Image[gz.msgs.Image \
+    --ros-args -r /world/iris_warehouse/model/iris_with_gimbal/model/gimbal/link/pitch_link/sensor/camera/image:=/camera/image_raw
+
+  Ruta 6 — din ROS-stack:
+  source /opt/ros/jazzy/setup.bash && source ~/Desktop/Autonomous-UAV/software/drone_ws/install/setup.bash
+  ros2 launch drone_bringup sim_chain.launch.py
