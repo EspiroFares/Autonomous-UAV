@@ -63,6 +63,9 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("desired_altitude", 1.5);
             this->declare_parameter("kp_z", 0.8);
             this->declare_parameter("max_vz", 0.2);
+
+            this->declare_parameter("min_distance", 1.0);
+            this->declare_parameter("k_approach", 0.6);
     }
 
     private:
@@ -100,6 +103,9 @@ class FollowControllerNode : public rclcpp::Node {
             const double DESIRED_ALTITUDE = this->get_parameter("desired_altitude").as_double();
             const double KP_Z          = this->get_parameter("kp_z").as_double();
             const double MAX_VZ        = this->get_parameter("max_vz").as_double();
+
+            const double MIN_DISTANCE = this->get_parameter("min_distance").as_double();
+            const double K_APPROACH   = this->get_parameter("k_approach").as_double();
 
             drone_interfaces::msg::ControlSetpoint setpoint;
 
@@ -167,12 +173,19 @@ class FollowControllerNode : public rclcpp::Node {
             if (std::abs(dist_error) < VX_DEADBAND && std::abs(person_vel_filt_) < 0.15) {
                 vx = 0.0;
             }
+
             vx = std::clamp(vx, -MAX_VX, MAX_VX);
 
-            // Adaptiv slew: snabb omsvängning vid stort fel, mjuk nära målet
-            double slew = (std::abs(dist_error) > SLEW_SWITCH_DIST) ? VX_SLEW_FAST
-                                                                    : VX_SLEW_SLOW;
-            vx = std::clamp(vx, last_vx_cmd_ - slew, last_vx_cmd_ + slew);
+            // Adaptivt framåt-tak: 0 m/s vid MIN_DISTANCE, växer linjärt med avståndet.
+            // Bakåt är alltid tillåtet — den får fly, aldrig närma sig.
+            double max_approach = std::clamp(K_APPROACH * (dist - MIN_DISTANCE), 0.0, MAX_VX);
+            vx = std::min(vx, max_approach);
+
+            // Asymmetrisk slew: broms/reträtt alltid snabb, framåt-acceleration adaptiv
+            double slew_fwd = (std::abs(dist_error) > SLEW_SWITCH_DIST) ? VX_SLEW_FAST
+                                                                        : VX_SLEW_SLOW;
+            double slew_brake = VX_SLEW_FAST * 2.0;
+            vx = std::clamp(vx, last_vx_cmd_ - slew_brake, last_vx_cmd_ + slew_fwd);
             last_vx_cmd_ = vx;
 
             vx_hist_[vx_idx_] = vx;
