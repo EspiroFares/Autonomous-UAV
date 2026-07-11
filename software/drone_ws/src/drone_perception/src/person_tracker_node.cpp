@@ -11,6 +11,7 @@ class PersonTrackerNode : public rclcpp::Node {
 public:
     PersonTrackerNode() : Node("person_tracker_node"),
     track_id_(0),
+    has_track_(false),
     cx_(0.0f), cy_(0.0f),
     width_(0.0f), height_(0.0f),
     alpha_(0.6f)
@@ -28,16 +29,32 @@ private:
         track.header = msg->header;
 
         if (!msg->detected) {
+            has_track_ = false;
+
             track.valid = false;
             track.track_id = track_id_;
             pub_->publish(track);
             return;
         }
 
-        cx_= alpha_ * msg->bbox_center_x + (1.0f - alpha_) * cx_;
-        cy_= alpha_ * msg->bbox_center_y + (1.0f - alpha_) * cy_;
-        width_= alpha_ * msg->bbox_width + (1.0f - alpha_) * width_;
-        height_= alpha_ * msg->bbox_height + (1.0f - alpha_) * height_;
+        if (!has_track_) {
+            ++track_id_;
+
+            cx_ = msg->bbox_center_x;
+            cy_ = msg->bbox_center_y;
+            width_ = msg->bbox_width;
+            height_ = msg->bbox_height;
+
+            has_track_ = true;
+        } else {
+            cx_ = alpha_ * msg->bbox_center_x + (1.0f - alpha_) * cx_;
+
+            cy_ =alpha_ * msg->bbox_center_y + (1.0f - alpha_) * cy_;
+
+            width_ =alpha_ * msg->bbox_width + (1.0f - alpha_) * width_;
+
+            height_ =alpha_ * msg->bbox_height + (1.0f - alpha_) * height_;
+        }
 
         track.valid = true;
         track.track_id = track_id_;
@@ -55,6 +72,7 @@ private:
     rclcpp::Publisher<drone_interfaces::msg::Track>::SharedPtr pub_;
 
     uint32_t track_id_;
+    bool has_track_;
     float cx_, cy_, width_, height_;
     float alpha_;
 };

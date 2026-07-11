@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include<functional>                                                                      
 #include<memory>                                                                          
@@ -174,18 +175,39 @@ class FollowControllerNode : public rclcpp::Node {
                 vx = 0.0;
             }
 
+                        // Begränsa controllerns vanliga framåtkommando.
             vx = std::clamp(vx, -MAX_VX, MAX_VX);
 
-            // Adaptivt framåt-tak: 0 m/s vid MIN_DISTANCE, växer linjärt med avståndet.
-            // Bakåt är alltid tillåtet — den får fly, aldrig närma sig.
-            double max_approach = std::clamp(K_APPROACH * (dist - MIN_DISTANCE), 0.0, MAX_VX);
+            // Adaptivt framåt-tak:
+            // 0 m/s vid MIN_DISTANCE och linjärt ökande längre bort.
+            // Negativ vx (reträtt) påverkas inte.
+            const double max_approach = std::clamp(
+                K_APPROACH * (dist - MIN_DISTANCE),
+                0.0,
+                MAX_VX
+            );
+
             vx = std::min(vx, max_approach);
 
-            // Asymmetrisk slew: broms/reträtt alltid snabb, framåt-acceleration adaptiv
-            double slew_fwd = (std::abs(dist_error) > SLEW_SWITCH_DIST) ? VX_SLEW_FAST
-                                                                        : VX_SLEW_SLOW;
-            double slew_brake = VX_SLEW_FAST * 2.0;
-            vx = std::clamp(vx, last_vx_cmd_ - slew_brake, last_vx_cmd_ + slew_fwd);
+            // Asymmetrisk slew:
+            // snabb broms/reträtt, långsammare acceleration framåt.
+            const double slew_fwd =
+                (std::abs(dist_error) > SLEW_SWITCH_DIST)
+                    ? VX_SLEW_FAST
+                    : VX_SLEW_SLOW;
+
+            const double slew_brake = VX_SLEW_FAST * 2.0;
+
+            vx = std::clamp(
+                vx,
+                last_vx_cmd_ - slew_brake,
+                last_vx_cmd_ + slew_fwd
+            );
+
+            // Hårt säkerhetstak EFTER slew.
+            // Slew får aldrig återinföra framåthastighet över taket.
+            vx = std::min(vx, max_approach);
+
             last_vx_cmd_ = vx;
 
             vx_hist_[vx_idx_] = vx;

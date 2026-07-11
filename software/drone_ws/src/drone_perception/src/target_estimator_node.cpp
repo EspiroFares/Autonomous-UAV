@@ -1,3 +1,4 @@
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <cmath>
@@ -8,7 +9,11 @@
 
 class TargetEstimatorNode : public rclcpp::Node {
 public:
-    TargetEstimatorNode() : Node("target_estimator_node") {
+    TargetEstimatorNode()
+    : Node("target_estimator_node"),
+      has_distance_baseline_(false),
+      has_reacquisition_candidate_(false)
+    {
         sub_ = this->create_subscription<drone_interfaces::msg::Track>("/target/track", 10, std::bind(&TargetEstimatorNode::on_track, this, std::placeholders::_1));
 
         pub_ = this->create_publisher<drone_interfaces::msg::TargetState>("/target/state", 10);
@@ -19,8 +24,12 @@ public:
 private:
     void on_track(const drone_interfaces::msg::Track::SharedPtr msg) {
         drone_interfaces::msg::TargetState target;
+        target.stamp = msg->header.stamp;
 
         if (!msg->valid) {
+            has_distance_baseline_ = false;
+            has_reacquisition_candidate_ = false;
+
             target.detected = false;
             target.confidence = 0.0f;
             target.yaw_error = 0.0f;
@@ -29,13 +38,111 @@ private:
             return;
         }
 
-        const float known_shoulder_width = 0.45f;
-        const float focal_length = 600.0f;
-        const float image_width = 640.0f; 
+        constexpr float known_shoulder_width = 0.45f;
+        constexpr float focal_length = 600.0f;
+        constexpr float image_width = 640.0f;
 
-        float shoulder_width_px = msg->width * image_width;
-        float distance = (known_shoulder_width * focal_length) / (shoulder_width_px + 1e-6f); 
-        float yaw_error = (msg->center_x - 0.5f) * 2.0f;
+        const float shoulder_width_px = msg->width * image_width;
+        const float distance =
+            (known_shoulder_width * focal_length) /
+            (shoulder_width_px + 1e-6f);
+        const float yaw_error = (msg->center_x - 0.5f) * 2.0f;
+
+        target.bbox_center_x = msg->center_x;
+        target.bbox_center_y = msg->center_y;
+        target.bbox_width = msg->width;
+        target.bbox_height = msg->height;
+
+        const bool geometry_valid =
+            std::isfinite(msg->center_x) &&
+            std::isfinite(msg->center_y) &&
+            std::isfinite(shoulder_width_px) &&
+            std::isfinite(distance) &&
+            std::isfinite(yaw_error) &&
+            msg->center_x >= 0.0f && msg->center_x <= 1.0f &&
+            msg->center_y >= 0.0f && msg->center_y <= 1.0f &&
+            shoulder_width_px >= kMinShoulderWidthPx &&
+            shoulder_width_px <= image_width &&
+            distance >= kMinDistance &&
+            distance <= kMaxDistance;
+
+        if (!geometry_valid) {
+            has_distance_baseline_ = false;
+            has_reacquisition_candidate_ = false;
+
+            target.detected = false;
+            target.confidence = 0.0f;
+            target.yaw_error = 0.0f;
+            target.distance_estimate = 0.0f;
+            pub_->publish(target);
+            return;
+        }
+
+        const auto sample_time = std::chrono::steady_clock::now();
+
+        if (!has_distance_baseline_) {
+            if (!has_reacquisition_candidate_) {
+                StoreReacquisitionCandidate(distance, sample_time);
+                PublishRejectedMeasurement(target, yaw_error, distance);
+                return;
+            }
+
+            const float candidate_age =
+                std::chrono::duration<float>(
+                    sample_time - reacquisition_candidate_time_).count();
+            const float candidate_difference =
+                std::abs(distance - reacquisition_candidate_distance_);
+
+            const bool candidate_confirmed =
+                candidate_age > 0.0f &&
+                candidate_age <= kMaxReacquisitionGap &&
+                candidate_difference <= kReacquisitionTolerance;
+
+            if (!candidate_confirmed) {
+                StoreReacquisitionCandidate(distance, sample_time);
+                PublishRejectedMeasurement(target, yaw_error, distance);
+                return;
+            }
+
+            has_distance_baseline_ = true;
+            has_reacquisition_candidate_ = false;
+            last_accepted_distance_ = distance;
+            last_sample_time_ = sample_time;
+        } else {
+            const float sample_dt =
+                std::chrono::duration<float>(
+                    sample_time - last_sample_time_).count();
+
+            if (sample_dt <= 0.0f || sample_dt > kMaxSampleGap) {
+                has_distance_baseline_ = false;
+                StoreReacquisitionCandidate(distance, sample_time);
+                PublishRejectedMeasurement(target, yaw_error, distance);
+                return;
+            }
+
+            last_sample_time_ = sample_time;
+
+            const float distance_jump =
+                std::abs(distance - last_accepted_distance_);
+            const float implied_speed = distance_jump / sample_dt;
+
+            if (distance_jump > kMaxDistanceJump &&
+                implied_speed > kMaxDistanceRate)
+            {
+                RCLCPP_WARN_THROTTLE(
+                    this->get_logger(),
+                    *this->get_clock(),
+                    2000,
+                    "Rejected target jump: %.2f m at %.2f m/s",
+                    static_cast<double>(distance_jump),
+                    static_cast<double>(implied_speed));
+
+                PublishRejectedMeasurement(target, yaw_error, distance);
+                return;
+            }
+
+            last_accepted_distance_ = distance;
+        }
 
         target.detected = true;
         target.confidence = 0.9f;
@@ -45,8 +152,48 @@ private:
         pub_->publish(target);
     }
 
+    using SteadyTime = std::chrono::steady_clock::time_point;
+
+    void StoreReacquisitionCandidate(
+        float distance,
+        const SteadyTime & sample_time)
+    {
+        has_reacquisition_candidate_ = true;
+        reacquisition_candidate_distance_ = distance;
+        reacquisition_candidate_time_ = sample_time;
+    }
+
+    void PublishRejectedMeasurement(
+        drone_interfaces::msg::TargetState & target,
+        float yaw_error,
+        float distance)
+    {
+        target.detected = true;
+        target.confidence = kRejectedConfidence;
+        target.yaw_error = yaw_error;
+        target.distance_estimate = distance;
+        pub_->publish(target);
+    }
+
+    static constexpr float kMinShoulderWidthPx = 60.0f;
+    static constexpr float kMinDistance = 0.3f;
+    static constexpr float kMaxDistance = 5.0f;
+    static constexpr float kMaxDistanceJump = 1.0f;
+    static constexpr float kMaxDistanceRate = 4.0f;
+    static constexpr float kMaxSampleGap = 0.75f;
+    static constexpr float kMaxReacquisitionGap = 1.0f;
+    static constexpr float kReacquisitionTolerance = 0.5f;
+    static constexpr float kRejectedConfidence = 0.3f;
+
     rclcpp::Subscription<drone_interfaces::msg::Track>::SharedPtr sub_;
     rclcpp::Publisher<drone_interfaces::msg::TargetState>::SharedPtr pub_;
+
+    bool has_distance_baseline_;
+    bool has_reacquisition_candidate_;
+    float last_accepted_distance_;
+    float reacquisition_candidate_distance_;
+    SteadyTime last_sample_time_;
+    SteadyTime reacquisition_candidate_time_;
 };
 
 int main(int argc, char **argv) {
