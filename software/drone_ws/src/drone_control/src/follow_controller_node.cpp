@@ -52,12 +52,12 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("max_yaw_rate", 0.3);
             this->declare_parameter("yaw_deadband", 0.09);
 
-            this->declare_parameter("desired_distance", 1.5);
+            this->declare_parameter("desired_distance", 2.0);
             this->declare_parameter("kp_vx", 0.5);
-            this->declare_parameter("kff", 0.6);
-            this->declare_parameter("max_vx", 0.6);
+            this->declare_parameter("kff", 0.9);
+            this->declare_parameter("max_vx", 1.0);
             this->declare_parameter("vx_deadband", 0.20);
-            this->declare_parameter("vx_slew_fast", 0.20);
+            this->declare_parameter("vx_slew_fast", 0.30);
             this->declare_parameter("vx_slew_slow", 0.06);
             this->declare_parameter("slew_switch_dist", 0.4);
 
@@ -66,7 +66,7 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("max_vz", 0.2);
 
             this->declare_parameter("min_distance", 1.0);
-            this->declare_parameter("k_approach", 0.6);
+            this->declare_parameter("k_approach", 1.2);
     }
 
     private:
@@ -121,10 +121,10 @@ class FollowControllerNode : public rclcpp::Node {
                 setpoint.vy = 0.0;
                 setpoint.yaw_rate = 0.0;
 
-                has_prev_dist_ = false;
-                person_vel_filt_ = 0.0;
+                person_vel_filt_ *= 0.85;
                 last_vx_cmd_ = 0.0;
-                for (int i = 0; i < 7; i++) vx_hist_[i] = 0.0;
+                vx_hist_[vx_idx_] = 0.0;
+                vx_idx_ = (vx_idx_ + 1) % 7;
 
                 double vz = 0.0;
                 if (height_fresh) {
@@ -156,16 +156,19 @@ class FollowControllerNode : public rclcpp::Node {
             // Personens hastighet = relativ avståndsändring + vårt kommando
             // från ~0.7 s sedan (perception-latens + FC-svar, tidsmatchat)
             double dt = (this->now() - prev_dist_time_).seconds();
-            if (has_prev_dist_ && dt > 0.01 && dt < 0.5) {
+            if (!has_prev_dist_ || dt > 0.6) {
+                // första mätningen eller för långt gap: nollställ baslinjen
+                prev_dist_ = dist;
+                prev_dist_time_ = this->now();
+                has_prev_dist_ = true;
+            } else if (std::abs(dist - prev_dist_) > 0.001 && dt > 0.05) {
                 double raw_rate = (dist - prev_dist_) / dt;
                 double vx_delayed = vx_hist_[vx_idx_];
-                double person_vel_raw = raw_rate + vx_delayed;
-                person_vel_raw = std::clamp(person_vel_raw, -2.0, 2.0);
-                person_vel_filt_ = 0.75 * person_vel_filt_ + 0.25 * person_vel_raw;
+                double person_vel_raw = std::clamp(raw_rate + vx_delayed, -2.0, 2.0);
+                person_vel_filt_ = 0.6 * person_vel_filt_ + 0.4 * person_vel_raw;
+                prev_dist_ = dist;
+                prev_dist_time_ = this->now();
             }
-            prev_dist_ = dist;
-            prev_dist_time_ = this->now();
-            has_prev_dist_ = true;
 
             double dist_error = dist - DESIRED_DISTANCE;
             double vx = KP_VX * dist_error + KFF * person_vel_filt_;
@@ -175,7 +178,7 @@ class FollowControllerNode : public rclcpp::Node {
                 vx = 0.0;
             }
 
-                        // Begränsa controllerns vanliga framåtkommando.
+            // Begränsa controllerns vanliga framåtkommando.
             vx = std::clamp(vx, -MAX_VX, MAX_VX);
 
             // Adaptivt framåt-tak:
