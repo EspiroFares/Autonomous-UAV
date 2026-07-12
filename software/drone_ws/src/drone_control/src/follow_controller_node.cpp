@@ -52,7 +52,7 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("max_yaw_rate", 0.3);
             this->declare_parameter("yaw_deadband", 0.09);
 
-            this->declare_parameter("desired_distance", 1.5);
+            this->declare_parameter("desired_distance", 2.0);
             this->declare_parameter("kp_vx", 0.5);
             this->declare_parameter("kff", 0.9);
             this->declare_parameter("max_vx", 1.0);
