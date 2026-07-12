@@ -121,10 +121,10 @@ class FollowControllerNode : public rclcpp::Node {
                 setpoint.vy = 0.0;
                 setpoint.yaw_rate = 0.0;
 
-                has_prev_dist_ = false;
-                person_vel_filt_ = 0.0;
+                person_vel_filt_ *= 0.85;
                 last_vx_cmd_ = 0.0;
-                for (int i = 0; i < 7; i++) vx_hist_[i] = 0.0;
+                vx_hist_[vx_idx_] = 0.0;
+                vx_idx_ = (vx_idx_ + 1) % 7;
 
                 double vz = 0.0;
                 if (height_fresh) {
