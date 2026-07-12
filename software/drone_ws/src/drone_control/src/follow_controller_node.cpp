@@ -156,16 +156,19 @@ class FollowControllerNode : public rclcpp::Node {
             // Personens hastighet = relativ avståndsändring + vårt kommando
             // från ~0.7 s sedan (perception-latens + FC-svar, tidsmatchat)
             double dt = (this->now() - prev_dist_time_).seconds();
-            if (has_prev_dist_ && dt > 0.01 && dt < 0.5) {
+            if (!has_prev_dist_ || dt > 0.6) {
+                // första mätningen eller för långt gap: nollställ baslinjen
+                prev_dist_ = dist;
+                prev_dist_time_ = this->now();
+                has_prev_dist_ = true;
+            } else if (std::abs(dist - prev_dist_) > 0.001 && dt > 0.05) {
                 double raw_rate = (dist - prev_dist_) / dt;
                 double vx_delayed = vx_hist_[vx_idx_];
-                double person_vel_raw = raw_rate + vx_delayed;
-                person_vel_raw = std::clamp(person_vel_raw, -2.0, 2.0);
-                person_vel_filt_ = 0.75 * person_vel_filt_ + 0.25 * person_vel_raw;
+                double person_vel_raw = std::clamp(raw_rate + vx_delayed, -2.0, 2.0);
+                person_vel_filt_ = 0.6 * person_vel_filt_ + 0.4 * person_vel_raw;
+                prev_dist_ = dist;
+                prev_dist_time_ = this->now();
             }
-            prev_dist_ = dist;
-            prev_dist_time_ = this->now();
-            has_prev_dist_ = true;
 
             double dist_error = dist - DESIRED_DISTANCE;
             double vx = KP_VX * dist_error + KFF * person_vel_filt_;
@@ -175,7 +178,7 @@ class FollowControllerNode : public rclcpp::Node {
                 vx = 0.0;
             }
 
-                        // Begränsa controllerns vanliga framåtkommando.
+            // Begränsa controllerns vanliga framåtkommando.
             vx = std::clamp(vx, -MAX_VX, MAX_VX);
 
             // Adaptivt framåt-tak:
