@@ -18,6 +18,8 @@ find_package(OpenCV REQUIRED)
 install(PROGRAMS
   drone_perception/camera_driver_node.py
   drone_perception/person_detector_node.py
+  drone_perception/hud_overlay_node.py
+  drone_perception/sim_target_highlight_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

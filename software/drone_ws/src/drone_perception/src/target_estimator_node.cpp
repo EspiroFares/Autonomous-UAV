@@ -39,7 +39,10 @@ private:
         }
 
         constexpr float known_shoulder_width = 0.45f;
-        constexpr float focal_length = 600.0f;
+        // Sim camera (gimbal_small_3d) has horizontal_fov=1.2 rad @ 640px:
+        // focal_px = (640/2)/tan(0.6) = 467.7. main's 600.0f was tuned for
+        // a different (real Pi Camera) FOV. Recalibrate before deployment.
+        constexpr float focal_length = 467.7f;
         constexpr float image_width = 640.0f;
 
         const float shoulder_width_px = msg->width * image_width;
