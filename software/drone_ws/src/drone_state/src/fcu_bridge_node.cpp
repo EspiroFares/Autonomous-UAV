@@ -10,8 +10,10 @@
 #include "mavros_msgs/srv/set_mode.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "mavros_msgs/msg/position_target.hpp"
 #include "drone_interfaces/msg/vehicle_status.hpp"
 #include "drone_interfaces/msg/control_setpoint.hpp"
+
 
 using namespace std::chrono_literals;
 
@@ -39,7 +41,7 @@ class FcuBridgeNode : public rclcpp::Node {
 
 
         //MAVROS pub
-        cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/mavros/setpoint_velocity/cmd_vel_unstamped", 10);
+        cmd_pub_ = this->create_publisher<mavros_msgs::msg::PositionTarget>("/mavros/setpoint_raw/local", 10);
 
         //ROS pub
         vehicle_status_pub_ = this->create_publisher<drone_interfaces::msg::VehicleStatus>("/vehicle/status", 10);
@@ -92,25 +94,31 @@ class FcuBridgeNode : public rclcpp::Node {
         }
 
         void Update() {
-            //Initialte GUIDED mode
-            geometry_msgs::msg::Twist cmd;
 
-            bool setpoint_fresh = has_setpoint_ &&
-            (this->now() - last_setpoint_time_).seconds() < 0.5;
+            bool setpoint_fresh = has_setpoint_ && (this->now() - last_setpoint_time_).seconds() < 0.5;
+            //Initialte GUIDED mode
+            mavros_msgs::msg::PositionTarget cmd;
+            cmd.header.stamp = this->now();
+            cmd.coordinate_frame = mavros_msgs::msg::PositionTarget::FRAME_BODY_NED;
+            // Använd vx, vy, yaw_rate. Ignorera ALLT om Z -> FC håller höjden själv.
+            cmd.type_mask =
+                mavros_msgs::msg::PositionTarget::IGNORE_PX |
+                mavros_msgs::msg::PositionTarget::IGNORE_PY |
+                mavros_msgs::msg::PositionTarget::IGNORE_PZ |
+                mavros_msgs::msg::PositionTarget::IGNORE_VZ |
+                mavros_msgs::msg::PositionTarget::IGNORE_AFX |
+                mavros_msgs::msg::PositionTarget::IGNORE_AFY |
+                mavros_msgs::msg::PositionTarget::IGNORE_AFZ |
+                mavros_msgs::msg::PositionTarget::IGNORE_YAW;
 
             if (last_setpoint_.hold || !armed_ || !setpoint_fresh) {
-                cmd.linear.x  = 0.0;
-                cmd.linear.y  = 0.0;
-                cmd.linear.z  = 0.0;
-                cmd.angular.z  = 0.0;
-            }else {
-                cmd.linear.x  = last_setpoint_.vx;
-                cmd.linear.y  = last_setpoint_.vy;
-                cmd.linear.z  = last_setpoint_.vz;
-                cmd.angular.z  = last_setpoint_.yaw_rate;
+                cmd.velocity.x = 0.0; cmd.velocity.y = 0.0; cmd.yaw_rate = 0.0;
+            } else {
+                cmd.velocity.x = last_setpoint_.vx;
+                cmd.velocity.y = last_setpoint_.vy;
+                cmd.yaw_rate   = last_setpoint_.yaw_rate;
             }
-
-            cmd_vel_pub_->publish(cmd);
+            cmd_pub_->publish(cmd);
         }
 
     rclcpp::Subscription<mavros_msgs::msg::State>::SharedPtr mavros_state_sub_; 
@@ -119,7 +127,7 @@ class FcuBridgeNode : public rclcpp::Node {
     rclcpp::Subscription<sensor_msgs::msg::Range>::SharedPtr rangefinder_sub_;
 
 
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
+    rclcpp::Publisher<mavros_msgs::msg::PositionTarget>::SharedPtr cmd_pub_;
     rclcpp::Publisher<drone_interfaces::msg::VehicleStatus>::SharedPtr vehicle_status_pub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr vehicle_odom_pub_;
     rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr vehicle_height_pub_;
