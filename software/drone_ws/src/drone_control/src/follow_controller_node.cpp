@@ -54,9 +54,9 @@ class FollowControllerNode : public rclcpp::Node {
 
             this->declare_parameter("desired_distance", 2.0);
             this->declare_parameter("kp_vx", 0.5);
-            this->declare_parameter("kff", 0.9);
+            this->declare_parameter("kff", 0.5);
             this->declare_parameter("max_vx", 1.0);
-            this->declare_parameter("vx_deadband", 0.20);
+            this->declare_parameter("vx_deadband", 0.35);
             this->declare_parameter("vx_slew_fast", 0.30);
             this->declare_parameter("vx_slew_slow", 0.06);
             this->declare_parameter("slew_switch_dist", 0.4);
