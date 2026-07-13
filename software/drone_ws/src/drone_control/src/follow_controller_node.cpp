@@ -126,15 +126,8 @@ class FollowControllerNode : public rclcpp::Node {
                 vx_hist_[vx_idx_] = 0.0;
                 vx_idx_ = (vx_idx_ + 1) % 7;
 
-                double vz = 0.0;
-                if (height_fresh) {
-                    double z_error = DESIRED_ALTITUDE - current_z_;
-                    vz = std::clamp(KP_Z * z_error, -MAX_VZ, MAX_VZ);
-                    setpoint.hold = false;
-                } else {
-                    setpoint.hold = true;
-                }
-                setpoint.vz = vz;
+                setpoint.hold = false;
+                setpoint.vz = 0;
                 setpoint_pub_->publish(setpoint);
                 return;
             }
@@ -146,12 +139,7 @@ class FollowControllerNode : public rclcpp::Node {
             }
 
             double dist = std::sqrt(target_x_ * target_x_ + target_y_ * target_y_);
-            double vz = 0.0;
-            if (height_fresh) {
-                double z_error = DESIRED_ALTITUDE - current_z_;
-                vz = std::clamp(KP_Z * z_error, -MAX_VZ, MAX_VZ);
-            }
-            setpoint.vz = vz;
+            setpoint.vz = 0;
 
             // Personens hastighet = relativ avståndsändring + vårt kommando
             // från ~0.7 s sedan (perception-latens + FC-svar, tidsmatchat)
