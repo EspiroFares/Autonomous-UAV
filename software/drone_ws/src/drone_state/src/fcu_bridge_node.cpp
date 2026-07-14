@@ -1,6 +1,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <cmath>
 
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32.hpp"
@@ -79,16 +80,23 @@ class FcuBridgeNode : public rclcpp::Node {
             vehicle_odom_pub_->publish(*msg);
         }
 
-        void RangefinderCallback(const sensor_msgs::msg::Range::SharedPtr msg) {
-            std_msgs::msg::Float32 height;
-            height.data = msg->range;
-            vehicle_height_pub_->publish(height);
-        }
-
         void SetpointCallback(const drone_interfaces::msg::ControlSetpoint::SharedPtr msg) {
             last_setpoint_ = *msg;
             last_setpoint_time_ = this->now();
             has_setpoint_ = true;
+        }
+
+        void RangefinderCallback(
+            const sensor_msgs::msg::Range::SharedPtr msg){
+            if (!std::isfinite(msg->range) ||
+                msg->range < msg->min_range ||
+                msg->range > msg->max_range) {
+                return;
+            }
+
+            std_msgs::msg::Float32 height;
+            height.data = msg->range;
+            vehicle_height_pub_->publish(height);
         }
 
         void Update() {
