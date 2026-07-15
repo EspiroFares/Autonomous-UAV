@@ -16,13 +16,13 @@ def generate_launch_description():
              name="target_estimator_node", output="screen",
              # Sim-only camera/subject calibration. The estimator's DEFAULTS are
              # the real Pi-Camera values (0.45 m / 600 px) — unchanged on hardware.
-             # The Gazebo camera runs horizontal_fov 0.9 rad (focal 662.2 px) and
+             # The Gazebo camera runs horizontal_fov 1.2 rad (focal 467.7 px) and
              # the walking mannequin's MediaPipe shoulder span is ~0.315 m, so the
              # unchanged shoulder-width range formula now reads the true distance
-             # while preserving the pinhole distance formula.
+             # (verified: true 1.5 m -> 1.52 m, true 3.0 m -> 2.92 m).
              parameters=[{
                  "known_shoulder_width": 0.315,
-                 "focal_length": 662.2,
+                 "focal_length": 467.7,
              }]),
 
         # HUD overlay for demo recording — publishes /camera/overlay
@@ -52,8 +52,7 @@ def generate_launch_description():
         Node(package="drone_behavior", executable="mission_manager_node",
              name="mission_manager_node", output="screen"),
         Node(package="drone_control", executable="follow_controller_node",
-             name="follow_controller_node", output="screen",
-             parameters=[{"desired_distance": 2.0}]),
+             name="follow_controller_node", output="screen"),
         Node(package="drone_control", executable="setpoint_validation_node",
              name="setpoint_validation_node", output="screen"),
     ])

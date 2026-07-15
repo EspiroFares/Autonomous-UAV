@@ -185,7 +185,7 @@ private:
         pub_->publish(target);
     }
 
-    static constexpr float kMinShoulderWidthPx = 35.0f;
+    static constexpr float kMinShoulderWidthPx = 60.0f;
     static constexpr float kMinDistance = 0.3f;
     static constexpr float kMaxDistance = 5.0f;
     static constexpr float kMaxDistanceJump = 1.0f;

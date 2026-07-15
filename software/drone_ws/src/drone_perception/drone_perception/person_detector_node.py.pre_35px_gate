@@ -118,7 +118,7 @@ class PersonDetectorNode(Node):
                     measurements_finite
                     and shoulder_visibility >= 0.65
                     and shoulders_in_frame
-                    and shoulder_width_px >= 35.0
+                    and shoulder_width_px >= 60.0
                 )
 
                 if valid_pose:
