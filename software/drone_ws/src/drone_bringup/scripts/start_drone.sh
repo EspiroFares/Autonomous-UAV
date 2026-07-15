@@ -12,8 +12,7 @@ sleep 1
 
 # ── Window 0: MAVROS ──────────────────────────────────────────
 tmux new-session -d -s $SESSION -n mavros
-tmux send-keys -t $SESSION:mavros "$ENV; ros2 launch mavros apm.launch fcu_url:=serial:///dev/ttyAMA5:921600" C-m
-
+tmux send-keys -t $SESSION:mavros "$ENV; ros2 launch mavros apm.launch fcu_url:=serial:///dev/ttyAMA5:921600 2>&1 | grep --line-buffered -vE 'aiding|EKF3 IMU'" C-m
 # ── Window 1: perception (5) ──────────────────────────
 tmux new-window -t $SESSION -n perception
 tmux split-window -t $SESSION:perception -h
