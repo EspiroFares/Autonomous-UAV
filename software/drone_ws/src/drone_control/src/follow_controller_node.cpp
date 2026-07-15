@@ -37,7 +37,7 @@ class FollowControllerNode : public rclcpp::Node {
 
             setpoint_pub_ = this->create_publisher<drone_interfaces::msg::ControlSetpoint>("/control/setpoint_raw", 10);
 
-            timer_ = this->create_wall_timer(100ms, std::bind(&FollowControllerNode::Update, this));
+            timer_ = this->create_wall_timer(50ms, std::bind(&FollowControllerNode::Update, this));
 
              RCLCPP_INFO(this->get_logger(), "follow_controller_node started");
 
@@ -62,8 +62,8 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("slew_switch_dist", 0.4);
 
             this->declare_parameter("desired_altitude", 1.5);
-            this->declare_parameter("kp_z", 0.8);
-            this->declare_parameter("max_vz", 0.2);
+            this->declare_parameter("kp_z", 0.4);
+            this->declare_parameter("max_vz", 0.6);
 
             this->declare_parameter("min_distance", 1.0);
             this->declare_parameter("k_approach", 1.2);
