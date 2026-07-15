@@ -37,7 +37,7 @@ class FollowControllerNode : public rclcpp::Node {
 
             setpoint_pub_ = this->create_publisher<drone_interfaces::msg::ControlSetpoint>("/control/setpoint_raw", 10);
 
-            timer_ = this->create_wall_timer(100ms, std::bind(&FollowControllerNode::Update, this));
+            timer_ = this->create_wall_timer(50ms, std::bind(&FollowControllerNode::Update, this));
 
              RCLCPP_INFO(this->get_logger(), "follow_controller_node started");
 
@@ -54,16 +54,16 @@ class FollowControllerNode : public rclcpp::Node {
 
             this->declare_parameter("desired_distance", 2.0);
             this->declare_parameter("kp_vx", 0.5);
-            this->declare_parameter("kff", 0.9);
+            this->declare_parameter("kff", 0.5);
             this->declare_parameter("max_vx", 1.0);
-            this->declare_parameter("vx_deadband", 0.20);
+            this->declare_parameter("vx_deadband", 0.35);
             this->declare_parameter("vx_slew_fast", 0.30);
             this->declare_parameter("vx_slew_slow", 0.06);
             this->declare_parameter("slew_switch_dist", 0.4);
 
             this->declare_parameter("desired_altitude", 1.5);
-            this->declare_parameter("kp_z", 0.8);
-            this->declare_parameter("max_vz", 0.2);
+            this->declare_parameter("kp_z", 0.4);
+            this->declare_parameter("max_vz", 0.6);
 
             this->declare_parameter("min_distance", 1.0);
             this->declare_parameter("k_approach", 1.2);
@@ -110,31 +110,60 @@ class FollowControllerNode : public rclcpp::Node {
 
             drone_interfaces::msg::ControlSetpoint setpoint;
 
-            bool pos_fresh    = (this->now() - last_pos_time_).seconds() < 0.5;
-            bool height_fresh = has_odom_ && (this->now() - last_height_time_).seconds() < 0.5;
-            bool follow_fresh = (this->now() - last_follow_time_).seconds() < 0.5;
+            const auto now = this->now();
 
-            bool follow_ok = follow_enabled_ && follow_fresh && pos_fresh;
+            const bool pos_fresh =
+                (now - last_pos_time_).seconds() < 0.5;
+
+            const bool height_fresh =
+                has_odom_ &&
+                std::isfinite(current_z_) &&
+                (now - last_height_time_).seconds() < 0.5;
+
+            const bool follow_fresh =
+                (now - last_follow_time_).seconds() < 0.5;
+
+            // Död eller ogiltig lidar: stoppa alla kommandon.
+            if (!height_fresh) {
+                setpoint.vx = 0.0;
+                setpoint.vy = 0.0;
+                setpoint.vz = 0.0;
+                setpoint.yaw_rate = 0.0;
+                setpoint.hold = true;
+
+                person_vel_filt_ = 0.0;
+                last_vx_cmd_ = 0.0;
+                has_prev_dist_ = false;
+
+                setpoint_pub_->publish(setpoint);
+                return;
+            }
+
+            // Yttre lidarbaserad AGL-reglering.
+            // Körs även under IDLE och TARGET_LOST.
+            const double vz_command = std::clamp(
+                KP_Z * (DESIRED_ALTITUDE - current_z_),
+                -MAX_VZ,
+                MAX_VZ
+            );
+
+            const bool follow_ok =
+                follow_enabled_ &&
+                follow_fresh &&
+                pos_fresh;
 
             if (!follow_ok) {
                 setpoint.vx = 0.0;
                 setpoint.vy = 0.0;
+                setpoint.vz = vz_command;
                 setpoint.yaw_rate = 0.0;
+                setpoint.hold = false;
 
                 person_vel_filt_ *= 0.85;
                 last_vx_cmd_ = 0.0;
                 vx_hist_[vx_idx_] = 0.0;
                 vx_idx_ = (vx_idx_ + 1) % 7;
 
-                double vz = 0.0;
-                if (height_fresh) {
-                    double z_error = DESIRED_ALTITUDE - current_z_;
-                    vz = std::clamp(KP_Z * z_error, -MAX_VZ, MAX_VZ);
-                    setpoint.hold = false;
-                } else {
-                    setpoint.hold = true;
-                }
-                setpoint.vz = vz;
                 setpoint_pub_->publish(setpoint);
                 return;
             }
@@ -146,12 +175,6 @@ class FollowControllerNode : public rclcpp::Node {
             }
 
             double dist = std::sqrt(target_x_ * target_x_ + target_y_ * target_y_);
-            double vz = 0.0;
-            if (height_fresh) {
-                double z_error = DESIRED_ALTITUDE - current_z_;
-                vz = std::clamp(KP_Z * z_error, -MAX_VZ, MAX_VZ);
-            }
-            setpoint.vz = vz;
 
             // Personens hastighet = relativ avståndsändring + vårt kommando
             // från ~0.7 s sedan (perception-latens + FC-svar, tidsmatchat)
@@ -216,9 +239,10 @@ class FollowControllerNode : public rclcpp::Node {
             vx_hist_[vx_idx_] = vx;
             vx_idx_ = (vx_idx_ + 1) % 7;
 
-
+        
             setpoint.vx = vx;
             setpoint.vy = 0.0;
+            setpoint.vz = vz_command;
             setpoint.yaw_rate = yaw_rate;
             setpoint.hold = false;
             setpoint_pub_->publish(setpoint);

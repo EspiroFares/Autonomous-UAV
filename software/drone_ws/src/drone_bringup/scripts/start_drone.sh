@@ -12,8 +12,7 @@ sleep 1
 
 # ── Window 0: MAVROS ──────────────────────────────────────────
 tmux new-session -d -s $SESSION -n mavros
-tmux send-keys -t $SESSION:mavros "$ENV; ros2 launch mavros apm.launch fcu_url:=serial:///dev/ttyAMA5:921600" C-m
-
+tmux send-keys -t $SESSION:mavros "$ENV; ros2 launch mavros apm.launch fcu_url:=serial:///dev/ttyAMA5:921600 2>&1 | grep --line-buffered -vE 'aiding|EKF3 IMU'" C-m
 # ── Window 1: perception (5) ──────────────────────────
 tmux new-window -t $SESSION -n perception
 tmux split-window -t $SESSION:perception -h
@@ -49,6 +48,7 @@ ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 74, message_rate: 10.0}'; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 147, message_rate: 2.0}'; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 30, message_rate: 10.0}'; \
+ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 65, message_rate: 5.0}';    \
 ros2 topic echo /vehicle/height" C-m
 
 tmux send-keys -t $SESSION:monitor.1 "$ENV; sleep 18; ros2 topic echo /mavros/setpoint_velocity/cmd_vel_unstamped" C-m
@@ -62,6 +62,7 @@ ros2 bag record -o ~/flight_logs/flight_\$(date +%Y%m%d_%H%M%S) \
 /target/detections /target/track /target/state /world/target_valid \
 /world/target_pos_relative /mission/state /mission/follow_enabled \
 /control/setpoint_raw /control/setpoint_validated \
+/mavros/rc/in \
 /mavros/setpoint_velocity/cmd_vel_unstamped /vehicle/height /vehicle/status /mavros/state \
 /mavros/vfr_hud /mavros/battery /mavros/imu/data" C-m
 
