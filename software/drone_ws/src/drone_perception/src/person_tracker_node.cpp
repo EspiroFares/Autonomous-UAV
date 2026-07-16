@@ -20,6 +20,10 @@ public:
     
     pub_ = this->create_publisher<drone_interfaces::msg::Track>("/target/track", 10);
 
+    // Preserve real-chain behavior by default; simulation overrides this.
+    this->declare_parameter<int64_t>("max_missed_frames", 0);
+    max_missed_frames_ = this->get_parameter("max_missed_frames").as_int();
+
     RCLCPP_INFO(this->get_logger(), "person_tracker_node started");
     }
 
@@ -29,13 +33,29 @@ private:
         track.header = msg->header;
 
         if (!msg->detected) {
-            has_track_ = false;
+            ++missed_frames_;
 
-            track.valid = false;
-            track.track_id = track_id_;
+            if (has_track_ && missed_frames_ <= max_missed_frames_) {
+                // Coast on the latest known box during a short detection gap.
+                track.valid = true;
+                track.track_id = track_id_;
+                track.center_x = cx_;
+                track.center_y = cy_;
+                track.width = width_;
+                track.height = height_;
+                track.velocity_x = 0.0f;
+                track.velocity_y = 0.0f;
+            } else {
+                has_track_ = false;
+                track.valid = false;
+                track.track_id = track_id_;
+            }
+
             pub_->publish(track);
             return;
         }
+
+        missed_frames_ = 0;
 
         if (!has_track_) {
             ++track_id_;
@@ -75,6 +95,8 @@ private:
     bool has_track_;
     float cx_, cy_, width_, height_;
     float alpha_;
+    int64_t missed_frames_{0};
+    int64_t max_missed_frames_{0};
 };
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);

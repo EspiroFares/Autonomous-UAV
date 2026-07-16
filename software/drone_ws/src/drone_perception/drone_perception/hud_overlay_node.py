@@ -43,6 +43,7 @@ class HudOverlayNode(Node):
         super().__init__("hud_overlay_node")
 
         self.bridge = CvBridge()
+        self.declare_parameter("track_fresh_timeout", 0.5)
 
         # latest state, drawn on each incoming frame
         self.track = None
@@ -79,11 +80,13 @@ class HudOverlayNode(Node):
         state = self.mission.state if self.mission else "IDLE"
         color = STATE_COLORS.get(state, DEFAULT_COLOR)
 
-        # consider a track "live" if it's valid and fresh (<0.5s old)
+        # Keep the latest valid box through short detector scheduling gaps.
+        track_fresh_timeout = float(
+            self.get_parameter("track_fresh_timeout").value)
         track_live = (
             self.track is not None
             and self.track.valid
-            and (time.time() - self.track_stamp) < 0.5
+            and (time.time() - self.track_stamp) < track_fresh_timeout
         )
 
         self._draw_frame_chrome(frame, w, h, color)

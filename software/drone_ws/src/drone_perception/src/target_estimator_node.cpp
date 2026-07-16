@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -25,6 +26,10 @@ public:
         // (~0.31 m as MediaPipe lands the shoulder joints), set in sim_chain.launch.py.
         this->declare_parameter("known_shoulder_width", 0.45);
         this->declare_parameter("focal_length", 600.0);
+        this->declare_parameter("enable_torso_fusion", false);
+        this->declare_parameter("torso_range_constant", 300.0);
+        this->declare_parameter("shoulder_fusion_weight", 0.35);
+        this->declare_parameter("max_distance", 5.0);
 
         RCLCPP_INFO(this->get_logger(), "target_estimator_node started");
     }
@@ -50,12 +55,28 @@ private:
             static_cast<float>(this->get_parameter("known_shoulder_width").as_double());
         const float focal_length =
             static_cast<float>(this->get_parameter("focal_length").as_double());
+        const bool enable_torso_fusion =
+            this->get_parameter("enable_torso_fusion").as_bool();
+        const float torso_range_constant =
+            static_cast<float>(this->get_parameter("torso_range_constant").as_double());
+        const float shoulder_fusion_weight = std::clamp(
+            static_cast<float>(
+                this->get_parameter("shoulder_fusion_weight").as_double()),
+            0.0f,
+            1.0f);
+        const float max_distance =
+            static_cast<float>(this->get_parameter("max_distance").as_double());
+
         constexpr float image_width = 640.0f;
+        constexpr float image_height = 480.0f;
 
         const float shoulder_width_px = msg->width * image_width;
-        const float distance =
+        const float torso_height_px = msg->height * image_height;
+        const float shoulder_distance =
             (known_shoulder_width * focal_length) /
             (shoulder_width_px + 1e-6f);
+        const float torso_distance =
+            torso_range_constant / (torso_height_px + 1e-6f);
         const float yaw_error = (msg->center_x - 0.5f) * 2.0f;
 
         target.bbox_center_x = msg->center_x;
@@ -63,18 +84,60 @@ private:
         target.bbox_width = msg->width;
         target.bbox_height = msg->height;
 
-        const bool geometry_valid =
+        const bool center_valid =
             std::isfinite(msg->center_x) &&
             std::isfinite(msg->center_y) &&
-            std::isfinite(shoulder_width_px) &&
-            std::isfinite(distance) &&
             std::isfinite(yaw_error) &&
             msg->center_x >= 0.0f && msg->center_x <= 1.0f &&
-            msg->center_y >= 0.0f && msg->center_y <= 1.0f &&
+            msg->center_y >= 0.0f && msg->center_y <= 1.0f;
+
+        const bool shoulder_valid =
+            std::isfinite(shoulder_width_px) &&
+            std::isfinite(shoulder_distance) &&
             shoulder_width_px >= kMinShoulderWidthPx &&
             shoulder_width_px <= image_width &&
-            distance >= kMinDistance &&
-            distance <= kMaxDistance;
+            shoulder_distance >= kMinDistance &&
+            shoulder_distance <= max_distance;
+
+        const bool torso_valid =
+            std::isfinite(torso_height_px) &&
+            std::isfinite(torso_distance) &&
+            torso_height_px >= kMinTorsoHeightPx &&
+            torso_height_px <= image_height &&
+            torso_distance >= kMinDistance &&
+            torso_distance <= max_distance;
+
+        float distance = 0.0f;
+        bool range_valid = false;
+
+        if (enable_torso_fusion) {
+            if (shoulder_valid && torso_valid) {
+                // A collapsed projected shoulder span makes shoulder range
+                // too large. In that orientation, trust torso height.
+                if (shoulder_distance > torso_distance * 1.30f) {
+                    distance = torso_distance;
+                } else {
+                    distance =
+                        shoulder_fusion_weight * shoulder_distance +
+                        (1.0f - shoulder_fusion_weight) * torso_distance;
+                }
+                range_valid = true;
+            } else if (torso_valid) {
+                distance = torso_distance;
+                range_valid = true;
+            } else if (shoulder_valid) {
+                distance = shoulder_distance;
+                range_valid = true;
+            }
+        } else if (shoulder_valid) {
+            distance = shoulder_distance;
+            range_valid = true;
+        }
+
+        const bool geometry_valid =
+            center_valid &&
+            range_valid &&
+            std::isfinite(distance);
 
         if (!geometry_valid) {
             has_distance_baseline_ = false;
@@ -186,11 +249,11 @@ private:
     }
 
     static constexpr float kMinShoulderWidthPx = 35.0f;
+    static constexpr float kMinTorsoHeightPx = 30.0f;
     static constexpr float kMinDistance = 0.3f;
-    static constexpr float kMaxDistance = 5.0f;
     static constexpr float kMaxDistanceJump = 1.0f;
     static constexpr float kMaxDistanceRate = 4.0f;
-    static constexpr float kMaxSampleGap = 0.75f;
+    static constexpr float kMaxSampleGap = 1.2f;
     static constexpr float kMaxReacquisitionGap = 1.0f;
     static constexpr float kReacquisitionTolerance = 0.5f;
     static constexpr float kRejectedConfidence = 0.3f;

@@ -26,6 +26,8 @@ class FcuBridgeNode : public rclcpp::Node {
     has_setpoint_(false)
     {
 
+        this->declare_parameter("use_odom_height_fallback", false);
+
         //MAVROS subs — must match MAVROS publisher QoS (BEST_EFFORT)
         auto mavros_qos = rclcpp::QoS(10).best_effort();
 
@@ -78,6 +80,13 @@ class FcuBridgeNode : public rclcpp::Node {
 
         void MavrosOdomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
             vehicle_odom_pub_->publish(*msg);
+
+            if (this->get_parameter("use_odom_height_fallback").as_bool() &&
+                std::isfinite(msg->pose.pose.position.z)) {
+                std_msgs::msg::Float32 height;
+                height.data = static_cast<float>(msg->pose.pose.position.z);
+                vehicle_height_pub_->publish(height);
+            }
         }
 
         void SetpointCallback(const drone_interfaces::msg::ControlSetpoint::SharedPtr msg) {

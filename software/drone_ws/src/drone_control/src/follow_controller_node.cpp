@@ -65,6 +65,8 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("kp_z", 0.4);
             this->declare_parameter("max_vz", 0.6);
 
+            this->declare_parameter("target_fresh_timeout", 0.5);
+
             this->declare_parameter("min_distance", 1.0);
             this->declare_parameter("k_approach", 1.2);
     }
@@ -112,8 +114,11 @@ class FollowControllerNode : public rclcpp::Node {
 
             const auto now = this->now();
 
+            const double TARGET_FRESH_TIMEOUT =
+                this->get_parameter("target_fresh_timeout").as_double();
+
             const bool pos_fresh =
-                (now - last_pos_time_).seconds() < 0.5;
+                (now - last_pos_time_).seconds() < TARGET_FRESH_TIMEOUT;
 
             const bool height_fresh =
                 has_odom_ &&

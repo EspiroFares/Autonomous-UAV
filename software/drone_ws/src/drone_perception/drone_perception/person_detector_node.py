@@ -87,51 +87,75 @@ class PersonDetectorNode(Node):
 
                 ls = lm[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER]
                 rs = lm[mp.solutions.pose.PoseLandmark.RIGHT_SHOULDER]
+                lh = lm[mp.solutions.pose.PoseLandmark.LEFT_HIP]
+                rh = lm[mp.solutions.pose.PoseLandmark.RIGHT_HIP]
 
                 shoulder_visibility = min(
                     float(ls.visibility),
                     float(rs.visibility),
                 )
+                torso_visibility = min(
+                    shoulder_visibility,
+                    float(lh.visibility),
+                    float(rh.visibility),
+                )
 
                 measurements_finite = all(
                     math.isfinite(value)
+                    for landmark in (ls, rs, lh, rh)
                     for value in (
-                        ls.x,
-                        ls.y,
-                        rs.x,
-                        rs.y,
-                        ls.visibility,
-                        rs.visibility,
+                        landmark.x,
+                        landmark.y,
+                        landmark.visibility,
                     )
                 )
 
-                shoulders_in_frame = (
-                    0.02 <= ls.x <= 0.98
-                    and 0.02 <= ls.y <= 0.98
-                    and 0.02 <= rs.x <= 0.98
-                    and 0.02 <= rs.y <= 0.98
+                shoulders_in_frame = all(
+                    0.02 <= value <= 0.98
+                    for value in (ls.x, ls.y, rs.x, rs.y)
+                )
+                torso_in_frame = all(
+                    0.02 <= value <= 0.98
+                    for value in (
+                        ls.x, ls.y, rs.x, rs.y,
+                        lh.x, lh.y, rh.x, rh.y,
+                    )
                 )
 
-                shoulder_width_px = abs(ls.x - rs.x) * w
+                shoulder_cx = (ls.x + rs.x) / 2.0
+                shoulder_cy = (ls.y + rs.y) / 2.0
+                hip_cx = (lh.x + rh.x) / 2.0
+                hip_cy = (lh.y + rh.y) / 2.0
 
-                valid_pose = (
+                shoulder_width_px = abs(ls.x - rs.x) * w
+                torso_height_px = math.hypot(
+                    (shoulder_cx - hip_cx) * w,
+                    (shoulder_cy - hip_cy) * h,
+                )
+
+                shoulder_valid = (
                     measurements_finite
                     and shoulder_visibility >= 0.65
                     and shoulders_in_frame
                     and shoulder_width_px >= 35.0
                 )
+                torso_valid = (
+                    measurements_finite
+                    and torso_visibility >= 0.65
+                    and torso_in_frame
+                    and torso_height_px >= 30.0
+                )
 
-                if valid_pose:
-                    cx = (ls.x + rs.x) / 2.0
-                    cy = (ls.y + rs.y) / 2.0
-
+                if shoulder_valid or torso_valid:
                     det.detected = True
-                    det.confidence = float(shoulder_visibility)
+                    det.confidence = float(
+                        max(shoulder_visibility, torso_visibility)
+                    )
 
-                    det.bbox_center_x = float(cx)
-                    det.bbox_center_y = float(cy)
+                    det.bbox_center_x = float(shoulder_cx)
+                    det.bbox_center_y = float(shoulder_cy)
                     det.bbox_width = float(shoulder_width_px / w)
-                    det.bbox_height = float(shoulder_width_px / w) * 2.0
+                    det.bbox_height = float(torso_height_px / h)
                     det.shoulder_width_px = float(shoulder_width_px)
 
                 else:

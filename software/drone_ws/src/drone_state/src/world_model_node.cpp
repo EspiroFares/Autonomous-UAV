@@ -41,6 +41,8 @@ public:
 
     timer_ = this->create_wall_timer(100ms, std::bind(&WorldModelNode::PublishWorldState, this));
 
+    this->declare_parameter("target_fresh_timeout", 0.5);
+
     RCLCPP_INFO(this->get_logger(), "world_model_node started");
   }
 
@@ -70,7 +72,9 @@ private:
       return;
     }
 
-    bool target_fresh = (this->now() - last_target_time_).seconds() < 0.5;
+    const double target_fresh_timeout =
+      this->get_parameter("target_fresh_timeout").as_double();
+    bool target_fresh = (this->now() - last_target_time_).seconds() < target_fresh_timeout;
     bool status_fresh = (this->now() - last_status_time_).seconds() < 0.5;
 
     bool vehicle_ready = last_vehicle_status_.connected &&

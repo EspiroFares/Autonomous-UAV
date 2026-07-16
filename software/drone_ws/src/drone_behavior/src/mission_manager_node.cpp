@@ -39,6 +39,8 @@
 
         timer_ = this->create_wall_timer(100ms, std::bind(&MissionManagerNode::Update, this));
 
+        this->declare_parameter("target_lost_timeout", 1.0);
+
         RCLCPP_INFO(this->get_logger(), "mission_manager_node started");
 
         last_valid_time_ = this->now();
@@ -62,6 +64,8 @@
         }
         void Update() {
             MissionState next_state = state_;
+            const double target_lost_timeout =
+                this->get_parameter("target_lost_timeout").as_double();
             if ((this->now() - last_world_time_).seconds() > 0.5) {
                 target_valid_ = false;
             }
@@ -78,7 +82,9 @@
                     }
                     break;
                 case MissionState::TRACKING:
-                    if (!target_valid_) {
+                    if (!target_valid_ &&
+                        (this->now() - last_valid_time_).seconds() >
+                            target_lost_timeout) {
                         next_state = MissionState::TARGET_LOST;
                     }
                     else {
@@ -88,7 +94,7 @@
 
                 case MissionState::FOLLOWING:
                     if (!target_valid_ &&
-                        (this->now() - last_valid_time_).seconds() > 1.0) {
+                        (this->now() - last_valid_time_).seconds() > target_lost_timeout) {
                         next_state = MissionState::TARGET_LOST;
                     }
                     break;
