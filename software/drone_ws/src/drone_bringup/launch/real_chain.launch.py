@@ -7,6 +7,13 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    bringup_share = get_package_share_directory("drone_bringup")
+    perception_params = os.path.join(
+        bringup_share,
+        "config",
+        "real_perception.yaml",
+    )
+
     # 1. MAVROS
     mavros = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -43,8 +50,14 @@ def generate_launch_description():
     )
 
     # 3. The entire ROS-stacken (respawn=True)
-    def n(pkg, exe):
-        return Node(package=pkg, executable=exe, output="screen", respawn=True)
+    def n(pkg, exe, parameters=None):
+        return Node(
+            package=pkg,
+            executable=exe,
+            output="screen",
+            respawn=True,
+            parameters=parameters or [],
+        )
 
     stack = TimerAction(
         period=12.0,
@@ -54,7 +67,11 @@ def generate_launch_description():
             n("drone_perception", "image_preprocessing_node"),
             n("drone_perception", "person_detector_node.py"),
             n("drone_perception", "person_tracker_node"),
-            n("drone_perception", "target_estimator_node"),
+            n(
+                "drone_perception",
+                "target_estimator_node",
+                parameters=[perception_params],
+            ),
             # State + Behavior + Control
             n("drone_state", "fcu_bridge_node"),
             n("drone_state", "world_model_node"),
