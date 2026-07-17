@@ -68,7 +68,8 @@ class FollowControllerNode : public rclcpp::Node {
             this->declare_parameter("min_distance", 1.0);
             this->declare_parameter("k_approach", 1.2);
 
-            this->declare_parameter("yaw_prog", 2.0);
+            this->declare_parameter("yaw_ref_dist", 2.0);
+            this->declare_parameter("yaw_min_scale", 0.4);
     }
 
     private:
@@ -110,7 +111,8 @@ class FollowControllerNode : public rclcpp::Node {
             const double MIN_DISTANCE = this->get_parameter("min_distance").as_double();
             const double K_APPROACH   = this->get_parameter("k_approach").as_double();
 
-            const double YAW_PROG = this->get_parameter("yaw_prog").as_double();
+            const double YAW_REF_DIST  = this->get_parameter("yaw_ref_dist").as_double();
+            const double YAW_MIN_SCALE = this->get_parameter("yaw_min_scale").as_double();
 
             drone_interfaces::msg::ControlSetpoint setpoint;
 
@@ -172,16 +174,18 @@ class FollowControllerNode : public rclcpp::Node {
                 return;
             }
 
+            double dist = std::sqrt(target_x_ * target_x_ + target_y_ * target_y_);
+
             double yaw_error = std::atan2(target_y_, target_x_);
             double yaw_rate = 0.0;
-            double e_mag = std::abs(yaw_error);
-            if (e_mag > YAW_DEADBAND) {
-                // Progressiv: gainen VÄXER med avståndet från center.
-                // Mjuk precis utanför deadbanden, aggressiv långt ut.
-                double eff_gain = KP_YAW * (1.0 + YAW_PROG * e_mag);
-                yaw_rate = std::clamp(eff_gain * -yaw_error, -MAX_YAW_RATE, MAX_YAW_RATE);
+            if (std::abs(yaw_error) > YAW_DEADBAND) {
+                // Distansviktning: nära dig = mjuk, längre bort = full respons.
+                // Nära håll ger små sidosteg stora bäringssving -> dämpa, annars
+                // jagar den varje liten rörelse (svänger fram och tillbaka).
+                double dist_scale = std::clamp(dist / YAW_REF_DIST, YAW_MIN_SCALE, 1.0);
+                yaw_rate = std::clamp(KP_YAW * dist_scale * (-yaw_error),
+                                      -MAX_YAW_RATE, MAX_YAW_RATE);
             }
-            double dist = std::sqrt(target_x_ * target_x_ + target_y_ * target_y_);
 
             // Personens hastighet = relativ avståndsändring + vårt kommando
             // från ~0.7 s sedan (perception-latens + FC-svar, tidsmatchat)
