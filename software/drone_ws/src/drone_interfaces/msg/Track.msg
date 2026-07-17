@@ -7,3 +7,7 @@ float32 width
 float32 height
 float32 velocity_x
 float32 velocity_y
+float32 shoulder_width_px
+float32 torso_height_px
+bool shoulder_valid
+bool torso_valid

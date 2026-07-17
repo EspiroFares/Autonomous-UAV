@@ -23,7 +23,8 @@ run_node "$SESSION:perception.0" "ros2 run drone_perception camera_driver_node.p
 run_node "$SESSION:perception.1" "ros2 run drone_perception image_preprocessing_node"
 run_node "$SESSION:perception.2" "ros2 run drone_perception person_detector_node.py"
 run_node "$SESSION:perception.3" "ros2 run drone_perception person_tracker_node"
-run_node "$SESSION:perception.4" "ros2 run drone_perception target_estimator_node"
+run_node "$SESSION:perception.4" \
+  "ros2 run drone_perception target_estimator_node --ros-args --params-file \$(ros2 pkg prefix drone_bringup)/share/drone_bringup/config/real_perception.yaml"
 
 # ── Window 2: control (5 ) ─────────────────────────────
 tmux new-window -t $SESSION -n control

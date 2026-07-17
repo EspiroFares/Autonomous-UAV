@@ -6,3 +6,6 @@ float32 bbox_center_y
 float32 bbox_width
 float32 bbox_height
 float32 shoulder_width_px
+float32 torso_height_px
+bool shoulder_valid
+bool torso_valid
