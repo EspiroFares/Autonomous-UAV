@@ -27,14 +27,22 @@ public:
             "/target/state",
             10);
 
-        shoulder_range_constant_ = static_cast<float>(
+        shoulder_scale_ = static_cast<float>(
             this->declare_parameter<double>(
-                "shoulder_range_constant",
-                270.0));
-        torso_range_constant_ = static_cast<float>(
+                "shoulder_scale",
+                405.014));
+        shoulder_offset_ = static_cast<float>(
             this->declare_parameter<double>(
-                "torso_range_constant",
-                300.0));
+                "shoulder_offset",
+                -0.314));
+        torso_scale_ = static_cast<float>(
+            this->declare_parameter<double>(
+                "torso_scale",
+                697.526));
+        torso_offset_ = static_cast<float>(
+            this->declare_parameter<double>(
+                "torso_offset",
+                -0.239));
         shoulder_fusion_weight_ = std::clamp(
             static_cast<float>(
                 this->declare_parameter<double>(
@@ -58,9 +66,12 @@ public:
         RCLCPP_INFO(
             this->get_logger(),
             "target_estimator_node started "
-            "(shoulder K=%.1f, torso K=%.1f, shoulder weight=%.2f)",
-            static_cast<double>(shoulder_range_constant_),
-            static_cast<double>(torso_range_constant_),
+            "(shoulder scale=%.3f offset=%.3f, "
+            "torso scale=%.3f offset=%.3f, shoulder weight=%.2f)",
+            static_cast<double>(shoulder_scale_),
+            static_cast<double>(shoulder_offset_),
+            static_cast<double>(torso_scale_),
+            static_cast<double>(torso_offset_),
             static_cast<double>(shoulder_fusion_weight_));
     }
 
@@ -93,11 +104,13 @@ private:
             msg->center_y <= 1.0f;
 
         const float shoulder_distance =
-            shoulder_range_constant_ /
-            (msg->shoulder_width_px + 1e-6f);
+            shoulder_scale_ /
+            (msg->shoulder_width_px + 1e-6f) +
+            shoulder_offset_;
         const float torso_distance =
-            torso_range_constant_ /
-            (msg->torso_height_px + 1e-6f);
+            torso_scale_ /
+            (msg->torso_height_px + 1e-6f) +
+            torso_offset_;
 
         const bool shoulder_distance_valid =
             msg->shoulder_valid &&
@@ -322,8 +335,10 @@ private:
     SteadyTime last_sample_time_;
     SteadyTime reacquisition_candidate_time_;
 
-    float shoulder_range_constant_;
-    float torso_range_constant_;
+    float shoulder_scale_;
+    float shoulder_offset_;
+    float torso_scale_;
+    float torso_offset_;
     float shoulder_fusion_weight_;
     float shoulder_torso_ratio_limit_;
     float min_distance_;
