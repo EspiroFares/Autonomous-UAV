@@ -3,6 +3,10 @@ bool detected
 float32 confidence
 float32 yaw_error
 float32 distance_estimate
+float32 shoulder_distance_estimate
+float32 torso_distance_estimate
+bool shoulder_distance_valid
+bool torso_distance_valid
 float32 bbox_center_x
 float32 bbox_center_y
 float32 bbox_width

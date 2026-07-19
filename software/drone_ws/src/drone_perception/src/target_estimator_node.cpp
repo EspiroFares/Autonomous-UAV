@@ -115,6 +115,13 @@ private:
             torso_distance >= min_distance_ &&
             torso_distance <= max_distance_;
 
+        target.shoulder_distance_estimate =
+            shoulder_distance_valid ? shoulder_distance : 0.0f;
+        target.torso_distance_estimate =
+            torso_distance_valid ? torso_distance : 0.0f;
+        target.shoulder_distance_valid = shoulder_distance_valid;
+        target.torso_distance_valid = torso_distance_valid;
+
         if (!center_valid ||
             (!shoulder_distance_valid && !torso_distance_valid))
         {
