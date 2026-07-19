@@ -1,8 +1,8 @@
 target_estimator_node:
-  ros__parameters:
-    shoulder_range_constant: 350.0
-    torso_range_constant: 600.0
-    shoulder_fusion_weight: 0.35
-    shoulder_torso_ratio_limit: 1.30
-    min_distance: 0.3
-    max_distance: 5.0
+    ros__parameters:
+      shoulder_range_constant: 350.0
+      torso_range_constant: 628.0
+      shoulder_fusion_weight: 0.35
+      shoulder_torso_ratio_limit: 1.30
+      min_distance: 0.3
+      max_distance: 5.0
