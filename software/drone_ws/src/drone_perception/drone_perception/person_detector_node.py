@@ -4,6 +4,7 @@ import threading
 import time
 import math
 
+import cv2
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -18,6 +19,17 @@ class PersonDetectorNode(Node):
         super().__init__("person_detector_node")
 
         self.bridge = CvBridge()
+
+        self.declare_parameter("inference_width", 320)
+        self.declare_parameter("inference_height", 240)
+        self.inference_width = max(
+            64,
+            self.get_parameter("inference_width").value,
+        )
+        self.inference_height = max(
+            64,
+            self.get_parameter("inference_height").value,
+        )
 
         self.pub = self.create_publisher(
             Detection,
@@ -50,7 +62,11 @@ class PersonDetectorNode(Node):
         )
         self._thread.start()
 
-        self.get_logger().info("person_detector_node started")
+        self.get_logger().info(
+            "person_detector_node started "
+            f"(MediaPipe inference: {self.inference_width}x"
+            f"{self.inference_height})"
+        )
 
     def on_image(self, msg):
         # Non-blocking — just store latest frame, drop old ones
@@ -74,8 +90,20 @@ class PersonDetectorNode(Node):
                 time.sleep(0.005)
                 continue
 
+            # MediaPipe runs on a smaller image for throughput. Its
+            # landmarks are normalized, so distance geometry is still
+            # converted back to pixels using the original camera size.
             h, w = frame.shape[:2]
-            rgb = frame[:, :, ::-1]
+            inference_frame = cv2.resize(
+                frame,
+                (self.inference_width, self.inference_height),
+                interpolation=cv2.INTER_AREA,
+            )
+            rgb = cv2.cvtColor(
+                inference_frame,
+                cv2.COLOR_BGR2RGB,
+            )
+            rgb.flags.writeable = False
 
             results = self.pose.process(rgb)
 
