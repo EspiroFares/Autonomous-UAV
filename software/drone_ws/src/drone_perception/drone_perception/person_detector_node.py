@@ -31,7 +31,7 @@ class PersonDetectorNode(Node):
             history=HistoryPolicy.KEEP_LAST,
         )
         self.sub = self.create_subscription(
-            Image, "/camera/image_preprocessed", self.on_image, qos
+            Image, "/camera/image_raw", self.on_image, qos
         )
 
         self.pose = mp.solutions.pose.Pose(

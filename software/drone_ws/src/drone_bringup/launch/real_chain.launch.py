@@ -64,7 +64,6 @@ def generate_launch_description():
         actions=[
             # Perception
             n("drone_perception", "camera_driver_node.py"),
-            n("drone_perception", "image_preprocessing_node"),
             n("drone_perception", "person_detector_node.py"),
             n("drone_perception", "person_tracker_node"),
             n(

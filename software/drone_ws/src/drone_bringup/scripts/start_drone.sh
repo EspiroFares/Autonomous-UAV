@@ -20,7 +20,6 @@ tmux split-window -t $SESSION:perception.0 -v
 tmux split-window -t $SESSION:perception.2 -v
 tmux split-window -t $SESSION:perception.3 -v
 run_node "$SESSION:perception.0" "ros2 run drone_perception camera_driver_node.py"
-run_node "$SESSION:perception.1" "ros2 run drone_perception image_preprocessing_node"
 run_node "$SESSION:perception.2" "ros2 run drone_perception person_detector_node.py"
 run_node "$SESSION:perception.3" "ros2 run drone_perception person_tracker_node"
 run_node "$SESSION:perception.4" \
