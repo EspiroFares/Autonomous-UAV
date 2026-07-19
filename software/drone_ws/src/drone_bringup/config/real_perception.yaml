@@ -4,8 +4,7 @@ target_estimator_node:
       shoulder_offset: -0.314
       torso_scale: 697.526
       torso_offset: -0.239
-      shoulder_fusion_weight: 0.35
-      shoulder_torso_ratio_limit: 1.30
+      max_shoulder_range_hold_time: 0.3
       min_distance: 0.3
       max_distance: 5.0
       measurement_median_window: 5

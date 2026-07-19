@@ -16,7 +16,8 @@ public:
     TargetEstimatorNode()
     : Node("target_estimator_node"),
       has_distance_baseline_(false),
-      has_reacquisition_candidate_(false)
+      has_reacquisition_candidate_(false),
+      has_accepted_shoulder_distance_(false)
     {
         sub_ = this->create_subscription<drone_interfaces::msg::Track>(
             "/target/track",
@@ -46,17 +47,11 @@ public:
             this->declare_parameter<double>(
                 "torso_offset",
                 -0.239));
-        shoulder_fusion_weight_ = std::clamp(
+        max_shoulder_range_hold_time_ =
             static_cast<float>(
                 this->declare_parameter<double>(
-                    "shoulder_fusion_weight",
-                    0.35)),
-            0.0f,
-            1.0f);
-        shoulder_torso_ratio_limit_ = static_cast<float>(
-            this->declare_parameter<double>(
-                "shoulder_torso_ratio_limit",
-                1.30));
+                    "max_shoulder_range_hold_time",
+                    0.3));
         min_distance_ = static_cast<float>(
             this->declare_parameter<double>(
                 "min_distance",
@@ -76,13 +71,11 @@ public:
         RCLCPP_INFO(
             this->get_logger(),
             "target_estimator_node started "
-            "(shoulder scale=%.3f offset=%.3f, "
-            "torso scale=%.3f offset=%.3f, shoulder weight=%.2f)",
+            "(shoulder-only range, scale=%.3f offset=%.3f, "
+            "range hold=%.2fs; torso is diagnostics only)",
             static_cast<double>(shoulder_scale_),
             static_cast<double>(shoulder_offset_),
-            static_cast<double>(torso_scale_),
-            static_cast<double>(torso_offset_),
-            static_cast<double>(shoulder_fusion_weight_));
+            static_cast<double>(max_shoulder_range_hold_time_));
     }
 
 private:
@@ -168,41 +161,46 @@ private:
         target.shoulder_distance_valid = shoulder_distance_valid;
         target.torso_distance_valid = torso_distance_valid;
 
-        if (!center_valid ||
-            (!shoulder_distance_valid && !torso_distance_valid))
-        {
+        if (!center_valid) {
             ResetDistanceState();
             PublishInvalidTarget(target);
             return;
         }
 
+        const auto sample_time =
+            std::chrono::steady_clock::now();
+
         float distance = 0.0f;
         float measurement_confidence = 0.0f;
+        bool using_current_shoulder_distance = false;
 
-        if (shoulder_distance_valid && torso_distance_valid) {
-            // Shoulder width shrinks strongly when a person turns sideways,
-            // which makes the shoulder-only range too large. In that case,
-            // prefer the much less yaw-sensitive torso measurement.
-            if (shoulder_distance >
-                torso_distance * shoulder_torso_ratio_limit_)
-            {
-                distance = torso_distance;
-                measurement_confidence = 0.85f;
-            } else {
-                distance =
-                    shoulder_fusion_weight_ * shoulder_distance +
-                    (1.0f - shoulder_fusion_weight_) * torso_distance;
-                measurement_confidence = 0.95f;
-            }
-        } else if (torso_distance_valid) {
-            distance = torso_distance;
-            measurement_confidence = 0.80f;
-        } else {
+        if (shoulder_distance_valid) {
             distance = shoulder_distance;
-            measurement_confidence = 0.75f;
+            measurement_confidence = 0.90f;
+            using_current_shoulder_distance = true;
+        } else if (
+            torso_distance_valid &&
+            has_accepted_shoulder_distance_)
+        {
+            const float shoulder_range_age =
+                std::chrono::duration<float>(
+                    sample_time -
+                    last_accepted_shoulder_time_).count();
+
+            if (shoulder_range_age >= 0.0f &&
+                shoulder_range_age <=
+                    max_shoulder_range_hold_time_)
+            {
+                // Torso preserves tracking and bearing only. It never
+                // supplies control range; briefly hold the last validated
+                // shoulder range while the shoulder measurement recovers.
+                distance = last_accepted_shoulder_distance_;
+                measurement_confidence = 0.60f;
+            }
         }
 
-        if (!std::isfinite(distance) ||
+        if (measurement_confidence <= 0.0f ||
+            !std::isfinite(distance) ||
             distance < min_distance_ ||
             distance > max_distance_)
         {
@@ -210,8 +208,6 @@ private:
             PublishInvalidTarget(target);
             return;
         }
-
-        const auto sample_time = std::chrono::steady_clock::now();
 
         if (!has_distance_baseline_) {
             if (!has_reacquisition_candidate_) {
@@ -300,6 +296,12 @@ private:
             last_accepted_distance_ = distance;
         }
 
+        if (using_current_shoulder_distance) {
+            has_accepted_shoulder_distance_ = true;
+            last_accepted_shoulder_distance_ = distance;
+            last_accepted_shoulder_time_ = sample_time;
+        }
+
         target.detected = true;
         target.confidence = measurement_confidence;
         target.yaw_error = yaw_error;
@@ -336,6 +338,7 @@ private:
     {
         has_distance_baseline_ = false;
         has_reacquisition_candidate_ = false;
+        has_accepted_shoulder_distance_ = false;
         shoulder_pixel_window_.clear();
         torso_pixel_window_.clear();
     }
@@ -387,17 +390,19 @@ private:
 
     bool has_distance_baseline_;
     bool has_reacquisition_candidate_;
+    bool has_accepted_shoulder_distance_;
     float last_accepted_distance_;
+    float last_accepted_shoulder_distance_;
     float reacquisition_candidate_distance_;
     SteadyTime last_sample_time_;
     SteadyTime reacquisition_candidate_time_;
+    SteadyTime last_accepted_shoulder_time_;
 
     float shoulder_scale_;
     float shoulder_offset_;
     float torso_scale_;
     float torso_offset_;
-    float shoulder_fusion_weight_;
-    float shoulder_torso_ratio_limit_;
+    float max_shoulder_range_hold_time_;
     float min_distance_;
     float max_distance_;
     std::size_t median_window_size_;
