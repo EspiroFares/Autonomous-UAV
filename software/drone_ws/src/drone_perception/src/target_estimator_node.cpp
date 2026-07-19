@@ -1,8 +1,11 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
 #include "drone_interfaces/msg/track.hpp"
@@ -62,6 +65,13 @@ public:
             this->declare_parameter<double>(
                 "max_distance",
                 5.0));
+        median_window_size_ = static_cast<std::size_t>(
+            std::clamp(
+                this->declare_parameter<int>(
+                    "measurement_median_window",
+                    5),
+                std::int64_t{1},
+                std::int64_t{9}));
 
         RCLCPP_INFO(
             this->get_logger(),
@@ -103,28 +113,51 @@ private:
             msg->center_y >= 0.0f &&
             msg->center_y <= 1.0f;
 
+        const bool shoulder_pixels_valid =
+            msg->shoulder_valid &&
+            std::isfinite(msg->shoulder_width_px) &&
+            msg->shoulder_width_px >= kMinShoulderWidthPx;
+        const bool torso_pixels_valid =
+            msg->torso_valid &&
+            std::isfinite(msg->torso_height_px) &&
+            msg->torso_height_px >= kMinTorsoHeightPx;
+
+        float filtered_shoulder_width_px = 0.0f;
+        if (shoulder_pixels_valid) {
+            filtered_shoulder_width_px = UpdateMedianWindow(
+                shoulder_pixel_window_,
+                msg->shoulder_width_px);
+        } else {
+            shoulder_pixel_window_.clear();
+        }
+
+        float filtered_torso_height_px = 0.0f;
+        if (torso_pixels_valid) {
+            filtered_torso_height_px = UpdateMedianWindow(
+                torso_pixel_window_,
+                msg->torso_height_px);
+        } else {
+            torso_pixel_window_.clear();
+        }
+
         const float shoulder_distance =
             shoulder_scale_ /
-            (msg->shoulder_width_px + 1e-6f) +
+            (filtered_shoulder_width_px + 1e-6f) +
             shoulder_offset_;
         const float torso_distance =
             torso_scale_ /
-            (msg->torso_height_px + 1e-6f) +
+            (filtered_torso_height_px + 1e-6f) +
             torso_offset_;
 
         const bool shoulder_distance_valid =
-            msg->shoulder_valid &&
-            std::isfinite(msg->shoulder_width_px) &&
+            shoulder_pixels_valid &&
             std::isfinite(shoulder_distance) &&
-            msg->shoulder_width_px >= kMinShoulderWidthPx &&
             shoulder_distance >= min_distance_ &&
             shoulder_distance <= max_distance_;
 
         const bool torso_distance_valid =
-            msg->torso_valid &&
-            std::isfinite(msg->torso_height_px) &&
+            torso_pixels_valid &&
             std::isfinite(torso_distance) &&
-            msg->torso_height_px >= kMinTorsoHeightPx &&
             torso_distance >= min_distance_ &&
             torso_distance <= max_distance_;
 
@@ -277,10 +310,34 @@ private:
     using SteadyTime =
         std::chrono::steady_clock::time_point;
 
+    float UpdateMedianWindow(
+        std::deque<float> & window,
+        const float sample)
+    {
+        window.push_back(sample);
+        while (window.size() > median_window_size_) {
+            window.pop_front();
+        }
+
+        std::vector<float> sorted(window.begin(), window.end());
+        std::sort(sorted.begin(), sorted.end());
+
+        const std::size_t middle = sorted.size() / 2;
+        if (sorted.size() % 2 == 0) {
+            return 0.5f * (
+                sorted[middle - 1] +
+                sorted[middle]);
+        }
+
+        return sorted[middle];
+    }
+
     void ResetDistanceState()
     {
         has_distance_baseline_ = false;
         has_reacquisition_candidate_ = false;
+        shoulder_pixel_window_.clear();
+        torso_pixel_window_.clear();
     }
 
     void PublishInvalidTarget(
@@ -343,6 +400,9 @@ private:
     float shoulder_torso_ratio_limit_;
     float min_distance_;
     float max_distance_;
+    std::size_t median_window_size_;
+    std::deque<float> shoulder_pixel_window_;
+    std::deque<float> torso_pixel_window_;
 };
 
 int main(int argc, char **argv) {

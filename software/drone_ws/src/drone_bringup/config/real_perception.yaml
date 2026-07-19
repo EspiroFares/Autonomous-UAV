@@ -8,3 +8,4 @@ target_estimator_node:
       shoulder_torso_ratio_limit: 1.30
       min_distance: 0.3
       max_distance: 5.0
+      measurement_median_window: 5
