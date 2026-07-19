@@ -7,4 +7,4 @@ target_estimator_node:
       max_shoulder_range_hold_time: 0.3
       min_distance: 0.3
       max_distance: 5.0
-      measurement_median_window: 5
+      measurement_median_window: 3
