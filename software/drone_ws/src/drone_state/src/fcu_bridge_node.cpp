@@ -6,6 +6,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float32.hpp"
 #include "sensor_msgs/msg/range.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 #include "mavros_msgs/msg/state.hpp"
 
 #include "mavros_msgs/srv/set_mode.hpp"
@@ -34,6 +35,8 @@ class FcuBridgeNode : public rclcpp::Node {
         mavros_odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>("/mavros/local_position/odom", mavros_qos, std::bind(&FcuBridgeNode::MavrosOdomCallback, this, std::placeholders::_1));
 
         rangefinder_sub_ = this->create_subscription<sensor_msgs::msg::Range>("/mavros/rangefinder/rangefinder", mavros_qos,std::bind(&FcuBridgeNode::RangefinderCallback, this, std::placeholders::_1));
+
+        imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data", mavros_qos, std::bind(&FcuBridgeNode::ImuCallback, this, std::placeholders::_1));
 
         //ROS subs
         setpoint_sub_ = this->create_subscription<drone_interfaces::msg::ControlSetpoint>("/control/setpoint_validated", 10, std::bind(&FcuBridgeNode::SetpointCallback, this, std::placeholders::_1));
@@ -86,6 +89,20 @@ class FcuBridgeNode : public rclcpp::Node {
             has_setpoint_ = true;
         }
 
+        void ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msg){
+            // Lodrät projektionsfaktor = världens z-komponent av kroppens
+            // ner-axel = R33 = 1 - 2(qx^2 + qy^2) = cos(pitch)*cos(roll).
+            // 1.0 när plan, <1.0 när den lutar.
+            const double qx = msg->orientation.x;
+            const double qy = msg->orientation.y;
+            double factor = 1.0 - 2.0 * (qx * qx + qy * qy);
+
+            // Skydd: ignorera orimlig attityd (>~45° lut) eller skräp-quaternion.
+            if (std::isfinite(factor) && factor > 0.7 && factor <= 1.0) {
+                tilt_factor_ = factor;
+            }
+        }
+
         void RangefinderCallback(
             const sensor_msgs::msg::Range::SharedPtr msg){
             if (!std::isfinite(msg->range) ||
@@ -95,7 +112,10 @@ class FcuBridgeNode : public rclcpp::Node {
             }
 
             std_msgs::msg::Float32 height;
-            height.data = msg->range;
+            // Pitch/roll-kompensation: lidarn mäter snett avstånd när den lutar
+            // (range/cos(tilt)), vilket loopen annars läser som "för hög" och
+            // driver ner den vid framåtflygning. Projicera på lodrätt.
+            height.data = static_cast<float>(msg->range * tilt_factor_);
             vehicle_height_pub_->publish(height);
         }
 
@@ -125,6 +145,7 @@ class FcuBridgeNode : public rclcpp::Node {
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr mavros_odom_sub_;
     rclcpp::Subscription<drone_interfaces::msg::ControlSetpoint>::SharedPtr setpoint_sub_;
     rclcpp::Subscription<sensor_msgs::msg::Range>::SharedPtr rangefinder_sub_;
+    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
 
 
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
@@ -143,6 +164,7 @@ class FcuBridgeNode : public rclcpp::Node {
     bool has_setpoint_;
     bool armed_;
     bool connected_;
+    double tilt_factor_ = 1.0;
     std::string current_mode_;
     drone_interfaces::msg::ControlSetpoint last_setpoint_;
 };
