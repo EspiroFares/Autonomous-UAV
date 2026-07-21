@@ -55,12 +55,18 @@ class PersonDetectorNode(Node):
         self._lock = threading.Lock()
         self._latest_frame = None
         self._latest_header = None
+        self._last_frame_time = time.time()
 
         self._thread = threading.Thread(
             target=self._inference_loop,
             daemon=True,
         )
         self._thread.start()
+
+        # Self-healing watchdog: if no camera frames arrive within 5 s
+        # (CycloneDDS discovery race at startup, or a camera stall), exit
+        # so the tmux restart loop respawns us and we re-discover the camera.
+        self._watchdog_timer = self.create_timer(1.0, self._check_alive)
 
         self.get_logger().info(
             "person_detector_node started "
@@ -78,6 +84,14 @@ class PersonDetectorNode(Node):
         with self._lock:
             self._latest_frame = frame
             self._latest_header = msg.header
+        self._last_frame_time = time.time()
+
+    def _check_alive(self):
+        if time.time() - self._last_frame_time > 5.0:
+            self.get_logger().error(
+                "No camera frames for 5s — shutting down for tmux respawn"
+            )
+            rclpy.shutdown()
 
     def _inference_loop(self):
         while rclpy.ok():
