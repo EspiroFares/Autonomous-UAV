@@ -48,25 +48,25 @@ class FollowControllerNode : public rclcpp::Node {
             prev_dist_time_ = this->now();
             for (int i = 0; i < 7; i++) vx_hist_[i] = 0.0;
 
-            this->declare_parameter("kp_yaw", 0.4);
-            this->declare_parameter("max_yaw_rate", 0.3);
-            this->declare_parameter("yaw_deadband", 0.09);
+            this->declare_parameter("kp_yaw", 0.45);
+            this->declare_parameter("max_yaw_rate", 0.45);
+            this->declare_parameter("yaw_deadband", 0.11);
 
             this->declare_parameter("desired_distance", 2.0);
-            this->declare_parameter("kp_vx", 0.5);
+            this->declare_parameter("kp_vx", 0.4);
             this->declare_parameter("kff", 0.5);
-            this->declare_parameter("max_vx", 1.0);
-            this->declare_parameter("vx_deadband", 0.35);
-            this->declare_parameter("vx_slew_fast", 0.30);
-            this->declare_parameter("vx_slew_slow", 0.06);
-            this->declare_parameter("slew_switch_dist", 0.4);
+            this->declare_parameter("max_vx", 0.6);
+            this->declare_parameter("vx_deadband", 0.30);
+            this->declare_parameter("vx_slew_fast", 0.08);
+            this->declare_parameter("vx_slew_slow", 0.03);
+            this->declare_parameter("slew_switch_dist", 0.3);
 
-            this->declare_parameter("desired_altitude", 1.5);
-            this->declare_parameter("kp_z", 0.4);
-            this->declare_parameter("max_vz", 0.6);
+            this->declare_parameter("desired_altitude", 1.2);
+            this->declare_parameter("kp_z", 0.55);
+            this->declare_parameter("max_vz", 0.4);
 
-            this->declare_parameter("min_distance", 1.0);
-            this->declare_parameter("k_approach", 1.2);
+            this->declare_parameter("min_distance", 1.2);
+            this->declare_parameter("k_approach", 0.8);
 
             this->declare_parameter("yaw_ref_dist", 2.0);
             this->declare_parameter("yaw_min_scale", 0.4);
