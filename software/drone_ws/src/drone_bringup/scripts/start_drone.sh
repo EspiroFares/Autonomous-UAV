@@ -20,7 +20,9 @@ tmux split-window -t $SESSION:perception.0 -v
 tmux split-window -t $SESSION:perception.2 -v
 tmux split-window -t $SESSION:perception.3 -v
 run_node "$SESSION:perception.0" "ros2 run drone_perception camera_driver_node.py"
-run_node "$SESSION:perception.2" "ros2 run drone_perception person_detector_node.py"
+# person_detector flyttad till eget fonster [detector] langst ner - startas SIST
+# sa den inte forlorar CycloneDDS-upptacktsracet mot kameran vid samtidig start.
+tmux send-keys -t "$SESSION:perception.2" "$ENV; echo 'person_detector kors i fonstret [detector] - startas sist'" C-m
 run_node "$SESSION:perception.3" "ros2 run drone_perception person_tracker_node"
 run_node "$SESSION:perception.4" \
   "ros2 run drone_perception target_estimator_node --ros-args --params-file \$(ros2 pkg prefix drone_bringup)/share/drone_bringup/config/real_perception.yaml"
@@ -65,6 +67,13 @@ ros2 bag record -o ~/flight_logs/flight_\$(date +%Y%m%d_%H%M%S) \
 /mavros/rc/in \
 /mavros/setpoint_velocity/cmd_vel_unstamped /vehicle/height /vehicle/status /mavros/state \
 /mavros/vfr_hud /mavros/battery /mavros/imu/data" C-m
+
+# ── Window 4: detector (startas SIST sa kameran hunnit upp helt) ───
+# Motverkar CycloneDDS-upptacktsracet: person_detector prenumererar pa
+# /camera/image_raw forst efter att kameran ar etablerad. sleep 20 EN gang,
+# sen restart-loop (watchdogen kan respawna utan att vanta 20s igen).
+tmux new-window -t $SESSION -n detector
+tmux send-keys -t $SESSION:detector "$ENV; sleep 20; while true; do ros2 run drone_perception person_detector_node.py; echo '*** NODE EXITED - restarting in 2s ***'; sleep 2; done" C-m
 
 tmux select-window -t $SESSION:monitor
 tmux attach -t $SESSION
