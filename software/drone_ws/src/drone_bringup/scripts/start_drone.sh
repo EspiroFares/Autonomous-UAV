@@ -2,7 +2,7 @@
 SESSION=drone
 ENV='export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp; source /opt/ros/jazzy/setup.bash; source ~/Autonomous-UAV/software/drone_ws/install/setup.bash'
 
-run_node() {  # $1 = pane-target, $2 = kommando
+run_node() {  # $1 = pane-target, $2 = command
     tmux send-keys -t "$1" "$ENV; while true; do $2; echo '*** NODE EXITED - restarting in 2s ***'; sleep 2; done" C-m
 }
 
@@ -20,9 +20,9 @@ tmux split-window -t $SESSION:perception.0 -v
 tmux split-window -t $SESSION:perception.2 -v
 tmux split-window -t $SESSION:perception.3 -v
 run_node "$SESSION:perception.0" "ros2 run drone_perception camera_driver_node.py"
-# person_detector flyttad till eget fonster [detector] langst ner - startas SIST
-# sa den inte forlorar CycloneDDS-upptacktsracet mot kameran vid samtidig start.
-tmux send-keys -t "$SESSION:perception.2" "$ENV; echo 'person_detector kors i fonstret [detector] - startas sist'" C-m
+# person_detector runs in its own window at the very end (started last) so it
+# doesn't lose the CycloneDDS discovery race against the camera on a cold start.
+tmux send-keys -t "$SESSION:perception.2" "$ENV; echo 'person_detector runs in the [detector] window - started last'" C-m
 run_node "$SESSION:perception.3" "ros2 run drone_perception person_tracker_node"
 run_node "$SESSION:perception.4" \
   "ros2 run drone_perception target_estimator_node --ros-args --params-file \$(ros2 pkg prefix drone_bringup)/share/drone_bringup/config/real_perception.yaml"
@@ -39,12 +39,12 @@ run_node "$SESSION:control.2" "ros2 run drone_behavior mission_manager_node"
 run_node "$SESSION:control.3" "ros2 run drone_control follow_controller_node"
 run_node "$SESSION:control.4" "ros2 run drone_control setpoint_validation_node"
 
-# ── Window 3: monitor (streams-setup + live-data + fri shell) ─
+# ── Window 3: monitor (stream setup + live data + free shell) ─
 tmux new-window -t $SESSION -n monitor
 tmux split-window -t $SESSION:monitor -h
 tmux split-window -t $SESSION:monitor.0 -v
 
-tmux send-keys -t $SESSION:monitor.0 "$ENV; echo 'Vantar 15s pa MAVROS...'; sleep 15; \
+tmux send-keys -t $SESSION:monitor.0 "$ENV; echo 'Waiting 15s for MAVROS...'; sleep 15; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 132, message_rate: 20.0}'; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 173, message_rate: 20.0}'; \
 ros2 service call /mavros/set_message_interval mavros_msgs/srv/MessageInterval '{message_id: 74, message_rate: 10.0}'; \
@@ -55,9 +55,9 @@ ros2 topic echo /vehicle/height" C-m
 
 tmux send-keys -t $SESSION:monitor.1 "$ENV; sleep 18; ros2 topic echo /mavros/setpoint_velocity/cmd_vel_unstamped" C-m
 
-tmux send-keys -t $SESSION:monitor.2 "$ENV; echo 'Fri shell - t.ex: ros2 param set /follow_controller_node kff 0.7'" C-m
+tmux send-keys -t $SESSION:monitor.2 "$ENV; echo 'Free shell - e.g. ros2 param set /follow_controller_node kff 0.7'" C-m
 
-# Pane 3: automatisk flygloggning (rosbag)
+# Pane 3: automatic flight logging (rosbag)
 tmux split-window -t $SESSION:monitor.2 -v
 tmux send-keys -t $SESSION:monitor.3 "$ENV; mkdir -p ~/flight_logs; sleep 20; \
 ros2 bag record -o ~/flight_logs/flight_\$(date +%Y%m%d_%H%M%S) \
@@ -68,10 +68,10 @@ ros2 bag record -o ~/flight_logs/flight_\$(date +%Y%m%d_%H%M%S) \
 /mavros/setpoint_velocity/cmd_vel_unstamped /vehicle/height /vehicle/status /mavros/state \
 /mavros/vfr_hud /mavros/battery /mavros/imu/data" C-m
 
-# ── Window 4: detector (startas SIST sa kameran hunnit upp helt) ───
-# Motverkar CycloneDDS-upptacktsracet: person_detector prenumererar pa
-# /camera/image_raw forst efter att kameran ar etablerad. sleep 20 EN gang,
-# sen restart-loop (watchdogen kan respawna utan att vanta 20s igen).
+# ── Window 4: detector (started last, after the camera is up) ───
+# Avoids the CycloneDDS discovery race: it subscribes to /camera/image_raw only
+# once the camera is established. Sleep 20 once, then a restart loop so the
+# watchdog can respawn it without waiting 20s again.
 tmux new-window -t $SESSION -n detector
 tmux send-keys -t $SESSION:detector "$ENV; sleep 20; while true; do ros2 run drone_perception person_detector_node.py; echo '*** NODE EXITED - restarting in 2s ***'; sleep 2; done" C-m
 
