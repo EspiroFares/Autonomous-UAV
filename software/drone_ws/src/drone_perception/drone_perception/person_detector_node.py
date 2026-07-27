@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Person detector: runs MediaPipe Pose on the latest camera frame in a
+# background thread and publishes shoulder/torso landmarks as a Detection.
 
 import threading
 import time

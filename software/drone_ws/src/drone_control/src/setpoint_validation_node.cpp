@@ -1,3 +1,6 @@
+// Final safety gate on the control setpoint: rejects NaN/Inf (forcing a hold)
+// and clamps every axis to a hard velocity envelope before it reaches the FC.
+
 #include <cmath>
 #include <functional>
 #include <memory>

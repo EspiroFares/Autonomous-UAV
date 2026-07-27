@@ -1,3 +1,7 @@
+// World model: fuses the target estimate with vehicle state into a single
+// "should we follow, and where is the target" answer. Publishes target validity
+// and the target's relative position (only while valid).
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -89,6 +93,8 @@ private:
     // Publish relative position (forward = x, lateral = y, vertical = z)
     // yaw_error is the horizontal angular offset to the target
     // distance_estimate is the estimated range
+    // Only publish a position while the target is valid. Publishing (0,0) on an
+    // invalid frame would read as "target at zero range" and slam the drone.
     geometry_msgs::msg::Point pos_msg;
     if (target_valid) {
       pos_msg.x = last_target_state_.distance_estimate * std::cos(last_target_state_.yaw_error);
