@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Publishes the Pi camera feed as /camera/image_raw at 15 fps.
 
 import rclpy
 from rclpy.node import Node
@@ -26,7 +27,9 @@ class CameraDriverNode(Node):
 
     def capture(self):
         frame = self.picam.capture_array()
-        frame = frame[:, :, ::-1] 
+        # picamera2's "BGR888" is actually RGB in memory, so flip the channels
+        # to get real BGR (otherwise MediaPipe sees blue-skinned people).
+        frame = frame[:, :, ::-1]
         msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")
         msg.header.stamp = self.get_clock().now().to_msg()
         self.pub.publish(msg)

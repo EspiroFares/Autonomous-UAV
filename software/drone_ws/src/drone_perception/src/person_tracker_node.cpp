@@ -1,3 +1,7 @@
+// Person tracker: smooths the raw per-frame detections with an EMA so the
+// downstream distance and bearing estimates don't jitter. Publishes an invalid
+// track as soon as detection drops so the mission logic can react.
+
 #include <functional>
 #include <memory>
 
@@ -37,6 +41,8 @@ public:
     }
 
 private:
+    // Exponential moving average. Seeds from the first measurement, then blends
+    // each new one against the running estimate.
     float filter_measurement(
         const float measurement,
         const float previous,
@@ -67,6 +73,8 @@ private:
         }
 
         if (!has_track_) {
+            // Fresh acquisition: seed straight from this detection instead of
+            // blending in leftover state from an old track.
             ++track_id_;
             track.track_id = track_id_;
 
