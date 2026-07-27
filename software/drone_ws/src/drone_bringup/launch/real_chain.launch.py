@@ -22,7 +22,7 @@ def generate_launch_description():
         launch_arguments={"fcu_url": "serial:///dev/ttyAMA5:921600"}.items(),
     )
 
-    # 2. validating datastreams from FC
+    # 2. Request the FC data streams (rangefinder)
     stream_requests = TimerAction(
         period=10.0,
         actions=[
@@ -49,7 +49,7 @@ def generate_launch_description():
         ],
     )
 
-    # 3. The entire ROS-stacken (respawn=True)
+    # 3. The full ROS stack (respawn=True)
     def n(pkg, exe, parameters=None):
         return Node(
             package=pkg,

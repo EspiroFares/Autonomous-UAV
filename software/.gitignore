@@ -8,3 +8,6 @@ mav.parm
 *.tlog
 *.tlog.raw
 mav.parm
+.DS_Store
+.Rhistory
+scratchpad/

@@ -1,3 +1,8 @@
+// FC bridge: the single gateway between the ROS stack and the flight
+// controller. Forwards validated velocity setpoints to MAVROS, republishes FC
+// state and the pitch-compensated lidar height for the rest of the stack, and
+// zeroes the command whenever anything looks unsafe.
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -27,7 +32,7 @@ class FcuBridgeNode : public rclcpp::Node {
     has_setpoint_(false)
     {
 
-        //MAVROS subs — must match MAVROS publisher QoS (BEST_EFFORT)
+        // MAVROS publishes BEST_EFFORT, so our subscriptions must match its QoS.
         auto mavros_qos = rclcpp::QoS(10).best_effort();
 
         mavros_state_sub_ = this->create_subscription<mavros_msgs::msg::State>("/mavros/state", mavros_qos, std::bind(&FcuBridgeNode::MavrosStateCallback, this, std::placeholders::_1));
@@ -38,14 +43,11 @@ class FcuBridgeNode : public rclcpp::Node {
 
         imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>("/mavros/imu/data", mavros_qos, std::bind(&FcuBridgeNode::ImuCallback, this, std::placeholders::_1));
 
-        //ROS subs
         setpoint_sub_ = this->create_subscription<drone_interfaces::msg::ControlSetpoint>("/control/setpoint_validated", 10, std::bind(&FcuBridgeNode::SetpointCallback, this, std::placeholders::_1));
 
 
-        //MAVROS pub
         cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/mavros/setpoint_velocity/cmd_vel_unstamped", 10);
 
-        //ROS pub
         vehicle_status_pub_ = this->create_publisher<drone_interfaces::msg::VehicleStatus>("/vehicle/status", 10);
 
         vehicle_odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("/vehicle/odom", 10);
@@ -54,10 +56,9 @@ class FcuBridgeNode : public rclcpp::Node {
 
 
 
-        //setup fcu mode
         set_mode_client_ = this->create_client<mavros_msgs::srv::SetMode>("/mavros/set_mode");
 
-        //timer
+        // 10 Hz command loop — GUIDED needs a continuous setpoint stream to stay armed.
         timer_ = this->create_wall_timer(100ms, std::bind(&FcuBridgeNode::Update, this));
 
         RCLCPP_INFO(this->get_logger(), "fcu_bridge_node started");
@@ -90,14 +91,14 @@ class FcuBridgeNode : public rclcpp::Node {
         }
 
         void ImuCallback(const sensor_msgs::msg::Imu::SharedPtr msg){
-            // Lodrät projektionsfaktor = världens z-komponent av kroppens
-            // ner-axel = R33 = 1 - 2(qx^2 + qy^2) = cos(pitch)*cos(roll).
-            // 1.0 när plan, <1.0 när den lutar.
+            // Vertical projection factor: the world-Z component of the body's
+            // down axis (the rotation matrix R33 term = cos(pitch)*cos(roll)).
+            // 1.0 when level, smaller as the airframe tilts.
             const double qx = msg->orientation.x;
             const double qy = msg->orientation.y;
             double factor = 1.0 - 2.0 * (qx * qx + qy * qy);
 
-            // Skydd: ignorera orimlig attityd (>~45° lut) eller skräp-quaternion.
+            // Reject a garbage quaternion or an implausible tilt (>~45 deg).
             if (std::isfinite(factor) && factor > 0.7 && factor <= 1.0) {
                 tilt_factor_ = factor;
             }
@@ -112,15 +113,13 @@ class FcuBridgeNode : public rclcpp::Node {
             }
 
             std_msgs::msg::Float32 height;
-            // Pitch/roll-kompensation: lidarn mäter snett avstånd när den lutar
-            // (range/cos(tilt)), vilket loopen annars läser som "för hög" och
-            // driver ner den vid framåtflygning. Projicera på lodrätt.
+            // Project the slant range onto vertical: a tilted airframe makes the
+            // downward lidar read too high, which the altitude loop would chase.
             height.data = static_cast<float>(msg->range * tilt_factor_);
             vehicle_height_pub_->publish(height);
         }
 
         void Update() {
-            //Initialte GUIDED mode
             geometry_msgs::msg::Twist cmd;
 
             bool setpoint_fresh = has_setpoint_ &&
