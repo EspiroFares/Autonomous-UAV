@@ -1,7 +1,12 @@
+// Follow controller: turns the target's relative position into velocity
+// setpoints (yaw to centre the person, vx to hold distance, vz to hold
+// altitude). Every input has a freshness check, so a stale feed degrades to
+// a safe hover instead of acting on old data.
+
 #include <algorithm>
 #include <chrono>
-#include<functional>                                                                      
-#include<memory>                                                                          
+#include <functional>
+#include <memory>
 #include <cmath>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/bool.hpp"
@@ -83,7 +88,7 @@ class FollowControllerNode : public rclcpp::Node {
             target_y_ = msg->y;
             last_pos_time_ = this->now();
         }
-        //(void)msg just for now
+
        void HeightCallback(const std_msgs::msg::Float32::SharedPtr msg){
             current_z_ = msg->data;
             has_odom_ = true;
@@ -92,7 +97,7 @@ class FollowControllerNode : public rclcpp::Node {
 
         void Update() {
             
-            //Make all the params ROS params
+            // Read the gains fresh each tick so they can be retuned live (ros2 param set).
             const double KP_YAW        = this->get_parameter("kp_yaw").as_double();
             const double MAX_YAW_RATE  = this->get_parameter("max_yaw_rate").as_double();
             const double YAW_DEADBAND  = this->get_parameter("yaw_deadband").as_double();
@@ -129,7 +134,7 @@ class FollowControllerNode : public rclcpp::Node {
             const bool follow_fresh =
                 (now - last_follow_time_).seconds() < 0.5;
 
-            // Död eller ogiltig lidar: stoppa alla kommandon.
+            // No valid height reading -> we can't trust altitude, so freeze and hold.
             if (!height_fresh) {
                 setpoint.vx = 0.0;
                 setpoint.vy = 0.0;
@@ -145,8 +150,8 @@ class FollowControllerNode : public rclcpp::Node {
                 return;
             }
 
-            // Yttre lidarbaserad AGL-reglering.
-            // Körs även under IDLE och TARGET_LOST.
+            // Outer altitude loop on the lidar height. Runs in every branch below
+            // (including idle / target-lost) so altitude is always held.
             const double vz_command = std::clamp(
                 KP_Z * (DESIRED_ALTITUDE - current_z_),
                 -MAX_VZ,
@@ -176,22 +181,25 @@ class FollowControllerNode : public rclcpp::Node {
 
             double dist = std::sqrt(target_x_ * target_x_ + target_y_ * target_y_);
 
+            // Bearing angle to the target, distance-independent (a raw pixel
+            // offset would scale with range).
             double yaw_error = std::atan2(target_y_, target_x_);
             double yaw_rate = 0.0;
             if (std::abs(yaw_error) > YAW_DEADBAND) {
-                // Distansviktning: nära dig = mjuk, längre bort = full respons.
-                // Nära håll ger små sidosteg stora bäringssving -> dämpa, annars
-                // jagar den varje liten rörelse (svänger fram och tillbaka).
+                // Scale the gain with distance: gentle up close, full authority
+                // far away. Close in, a small sideways step is a big bearing
+                // change, so a fixed gain over-reacts and hunts left-right.
                 double dist_scale = std::clamp(dist / YAW_REF_DIST, YAW_MIN_SCALE, 1.0);
                 yaw_rate = std::clamp(KP_YAW * dist_scale * (-yaw_error),
                                       -MAX_YAW_RATE, MAX_YAW_RATE);
             }
 
-            // Personens hastighet = relativ avståndsändring + vårt kommando
-            // från ~0.7 s sedan (perception-latens + FC-svar, tidsmatchat)
+            // Estimate the person's speed: measured range rate plus our own
+            // command from ~0.7 s ago. The ring buffer time-matches perception
+            // and FC lag so we don't read our own motion as theirs.
             double dt = (this->now() - prev_dist_time_).seconds();
             if (!has_prev_dist_ || dt > 0.6) {
-                // första mätningen eller för långt gap: nollställ baslinjen
+                // First sample, or too long a gap to differentiate: reset baseline.
                 prev_dist_ = dist;
                 prev_dist_time_ = this->now();
                 has_prev_dist_ = true;
@@ -207,17 +215,17 @@ class FollowControllerNode : public rclcpp::Node {
             double dist_error = dist - DESIRED_DISTANCE;
             double vx = KP_VX * dist_error + KFF * person_vel_filt_;
 
-            // Hold-zon: inom bandet och personen still -> ligg kvar
+            // Hold zone: inside the deadband and the person is still -> stay put.
             if (std::abs(dist_error) < VX_DEADBAND && std::abs(person_vel_filt_) < 0.15) {
                 vx = 0.0;
             }
 
-            // Begränsa controllerns vanliga framåtkommando.
+            // Clamp the raw command to the speed limit.
             vx = std::clamp(vx, -MAX_VX, MAX_VX);
 
-            // Adaptivt framåt-tak:
-            // 0 m/s vid MIN_DISTANCE och linjärt ökande längre bort.
-            // Negativ vx (reträtt) påverkas inte.
+            // Approach ceiling: forward speed is capped to zero at min_distance
+            // and grows with range, so we ease in as we close. Backing away is
+            // never limited.
             const double max_approach = std::clamp(
                 K_APPROACH * (dist - MIN_DISTANCE),
                 0.0,
@@ -226,8 +234,8 @@ class FollowControllerNode : public rclcpp::Node {
 
             vx = std::min(vx, max_approach);
 
-            // Asymmetrisk slew:
-            // snabb broms/reträtt, långsammare acceleration framåt.
+            // Asymmetric slew: brake/retreat fast, accelerate forward slowly
+            // (slower still once we're near the target distance).
             const double slew_fwd =
                 (std::abs(dist_error) > SLEW_SWITCH_DIST)
                     ? VX_SLEW_FAST
@@ -241,16 +249,14 @@ class FollowControllerNode : public rclcpp::Node {
                 last_vx_cmd_ + slew_fwd
             );
 
-            // Hårt säkerhetstak EFTER slew.
-            // Slew får aldrig återinföra framåthastighet över taket.
+            // Re-apply the ceiling after slewing: the rate limit must never push
+            // forward speed back above it.
             vx = std::min(vx, max_approach);
-
             last_vx_cmd_ = vx;
 
             vx_hist_[vx_idx_] = vx;
             vx_idx_ = (vx_idx_ + 1) % 7;
 
-        
             setpoint.vx = vx;
             setpoint.vy = 0.0;
             setpoint.vz = vz_command;
@@ -260,16 +266,10 @@ class FollowControllerNode : public rclcpp::Node {
             
         }
 
-        
-
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr target_valid_sub_;
-
         rclcpp::Subscription<geometry_msgs::msg::Point>::SharedPtr target_pos_sub_;
-
         rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr height_sub_;
-
         rclcpp::Publisher<drone_interfaces::msg::ControlSetpoint>::SharedPtr setpoint_pub_;
-
         rclcpp::TimerBase::SharedPtr timer_;
 
         rclcpp::Time last_pos_time_;
@@ -277,20 +277,17 @@ class FollowControllerNode : public rclcpp::Node {
         rclcpp::Time last_follow_time_;
         rclcpp::Time prev_dist_time_;
 
-        double prev_dist_;
-        double person_vel_filt_;
-        double last_vx_cmd_;
-        double vx_hist_[7];
         int vx_idx_;
-        bool has_prev_dist_;
-
-        bool follow_enabled_;
         double target_x_;
         double target_y_;
         double current_z_;
+        double prev_dist_;
+        double vx_hist_[7]; 
+        double last_vx_cmd_;
+        double person_vel_filt_;
         bool has_odom_;
-        
-
+        bool has_prev_dist_;
+        bool follow_enabled_;       
 };
 
 int main(int argc, char **argv){
