@@ -1,3 +1,8 @@
+// Target estimator: turns the tracked pixel measurements into a metric range
+// and a bearing. Shoulder width is the trusted range (torso is a short-lived
+// fallback), and a reacquisition + physics gate rejects spurious jumps before
+// they reach the controller.
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -95,6 +100,7 @@ private:
             return;
         }
 
+        // Horizontal offset from centre, mapped to [-1, 1] as a bearing proxy.
         const float yaw_error = (msg->center_x - 0.5f) * 2.0f;
 
         const bool center_valid =
@@ -133,6 +139,8 @@ private:
             torso_pixel_window_.clear();
         }
 
+        // Calibrated inverse model: distance = scale / width_px + offset, with
+        // scale and offset fit on the ground for shoulder and torso separately.
         const float shoulder_distance =
             shoulder_scale_ /
             (filtered_shoulder_width_px + 1e-6f) +
@@ -174,6 +182,7 @@ private:
         float measurement_confidence = 0.0f;
         bool using_current_shoulder_distance = false;
 
+        // Shoulder width is the trusted control range.
         if (shoulder_distance_valid) {
             distance = shoulder_distance;
             measurement_confidence = 0.90f;
@@ -209,6 +218,9 @@ private:
             return;
         }
 
+        // Fresh lock: don't trust a single measurement. Require a second sample
+        // soon after that agrees with the first before accepting a baseline, so
+        // the drone can't latch onto a one-frame false detection.
         if (!has_distance_baseline_) {
             if (!has_reacquisition_candidate_) {
                 StoreReacquisitionCandidate(distance, sample_time);
@@ -252,6 +264,8 @@ private:
                     sample_time -
                     last_sample_time_).count();
 
+            // Too long since the last accepted sample to trust continuity;
+            // drop the baseline and re-confirm from scratch.
             if (sample_dt <= 0.0f ||
                 sample_dt > kMaxSampleGap)
             {
@@ -275,6 +289,9 @@ private:
             const float implied_speed =
                 distance_jump / sample_dt;
 
+            // Physics gate: reject a jump that implies impossible human motion
+            // (both a large step and a high implied speed). It's almost always
+            // a perception spike, and acting on it would lunge the drone.
             if (distance_jump > kMaxDistanceJump &&
                 implied_speed > kMaxDistanceRate)
             {
@@ -312,6 +329,7 @@ private:
     using SteadyTime =
         std::chrono::steady_clock::time_point;
 
+    // Median over the last few samples to shrug off single-frame outliers.
     float UpdateMedianWindow(
         std::deque<float> & window,
         const float sample)

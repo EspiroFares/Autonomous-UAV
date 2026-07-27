@@ -1,3 +1,7 @@
+// Mission state machine. Turns the world model's target validity into a
+// FOLLOWING decision and publishes follow_enabled, which is what actually
+// gates the follow controller.
+
   #include <chrono>
   #include <functional>                                                         
   #include <memory>                                                           
@@ -62,6 +66,7 @@
         }
         void Update() {
             MissionState next_state = state_;
+            // Treat the target as lost if the world model has gone quiet.
             if ((this->now() - last_world_time_).seconds() > 0.5) {
                 target_valid_ = false;
             }
@@ -87,6 +92,8 @@
                     break;
 
                 case MissionState::FOLLOWING:
+                    // Ride out short detection dropouts; only give up after a
+                    // full second without a valid target.
                     if (!target_valid_ &&
                         (this->now() - last_valid_time_).seconds() > 1.0) {
                         next_state = MissionState::TARGET_LOST;

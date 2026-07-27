@@ -1,6 +1,10 @@
+// Resizes the camera feed to a fixed 640x480 and republishes it. Also runs a
+// self-healing watchdog: if no frames arrive within 5 s it exits so the launch
+// loop respawns it and re-runs camera discovery.
+
 #include <functional>
-#include <memory> 
-#include <chrono> 
+#include <memory>
+#include <chrono>
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "cv_bridge/cv_bridge.hpp"
@@ -32,8 +36,8 @@ private:
 void check_alive() {
         if (!got_frame_ && (this->now() - start_time_).seconds() > 5.0) {
             RCLCPP_ERROR(this->get_logger(),
-                "Inga kamerabilder efter 5s — avslutar for omstart");
-            rclcpp::shutdown();   // tmux-loopen respawnar -> ny discovery mot kameran
+                "No camera frames after 5s - exiting for restart");
+            rclcpp::shutdown();   // launch loop respawns us -> fresh camera discovery
         }
     }
 void on_image(const sensor_msgs::msg::Image::SharedPtr msg) {
