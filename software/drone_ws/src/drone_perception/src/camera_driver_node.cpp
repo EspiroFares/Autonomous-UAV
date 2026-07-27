@@ -1,8 +1,11 @@
+// Generic OpenCV (VideoCapture) camera driver — used off the Pi (laptop webcam
+// or sim). The real aircraft uses the picamera2 driver in camera_driver_node.py.
+
 #include <chrono>
 #include <functional>
 #include <memory>
 
-#include "rclcpp/rclcpp.hpp" 
+#include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "cv_bridge/cv_bridge.hpp"
 #include <opencv2/opencv.hpp>

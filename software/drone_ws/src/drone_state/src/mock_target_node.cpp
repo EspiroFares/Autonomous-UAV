@@ -1,6 +1,10 @@
-#include <chrono>                                              
-#include <functional>                                          
-#include <memory>                                              
+// Mock target for hardware-free testing: publishes a synthetic person that
+// sweeps side to side at a fixed distance, so the control chain can run without
+// the perception pipeline.
+
+#include <chrono>
+#include <functional>
+#include <memory>
 #include <cmath>
 
 #include "rclcpp/rclcpp.hpp"                                   

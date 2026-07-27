@@ -1,3 +1,6 @@
+// Mock flight controller for hardware-free testing: reports armed/offboard and
+// publishes a fixed hover odometry so the rest of the stack can run without a FC.
+
 #include <chrono>
 #include <functional>
 #include <memory>
