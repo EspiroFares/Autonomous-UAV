@@ -44,6 +44,7 @@ https://github.com/user-attachments/assets/7d0be21c-c6fa-4e51-9add-62b9557a809c
 - [System architecture](#system-architecture)
 - [Perception pipeline](#perception-pipeline)
 - [Simulation stack (the digital twin)](#simulation-stack-the-digital-twin)
+- [Ground station (live tuning)](#ground-station-live-tuning)
 - [Engineering deep-dives](#engineering-deep-dives)
 - [Technology stack](#technology-stack)
 - [Project status](#project-status)
@@ -59,8 +60,9 @@ https://github.com/user-attachments/assets/7d0be21c-c6fa-4e51-9add-62b9557a809c
 The drone autonomously **detects a person, locks on, and follows them indoors** — where GPS is unavailable.
 The companion computer turns a camera feed into a target estimate, decides what to do via a mission state
 machine, and produces high-level velocity commands. The flight controller turns those into stable, hovered
-flight. It holds a 1.5 m following distance and a 1.5 m lidar-referenced altitude, yaws to keep the person
-centered, and freezes into a safe hover the moment the target — or any part of the pipeline — is lost.
+flight. It holds a ~2 m following distance and a ~1.2 m lidar-referenced altitude — both live-tunable at
+runtime — yaws to keep the person centered, and freezes into a safe hover the moment the target — or any
+part of the pipeline — is lost.
 
 The whole point is the **sim-to-real split**: the same nodes ran against a simulated quadcopter in Gazebo
 first and fly the real one now, so the simulator is a true development and regression environment — not a toy.
@@ -140,6 +142,27 @@ https://github.com/user-attachments/assets/22fade36-4afa-4486-8f35-493470875aa7
 
 ---
 
+## Ground station (live tuning)
+
+A browser-based ground station connects to the aircraft over a **rosbridge websocket** and turns the whole
+autonomy stack into something you can tune, watch, and review in real time — no rebuilds, no redeploys.
+
+![Drone Tuner dashboard — Tuner, Drone Mind and Analysis](docs/dashboard/dashboard.png)
+
+- **Tuner** — every controller gain is a live ROS 2 parameter; sliders push changes to `follow_controller_node`
+  instantly (yaw, follow distance, altitude, safety limits) with per-parameter guidance. A Flight Controller
+  panel exposes MAVROS actions: arm/mode status, **Reboot FC**, **Request data streams**, and a one-shot
+  **Apply Altitude Fix**.
+- **Drone Mind** — a synthetic HUD built purely from telemetry (no video): a top-down view of the tracked
+  person, hold zone, camera FOV and intent, plus a side-view altitude ladder against the target height.
+- **Analysis** — an in-app ring-buffer recording with synchronized distance / velocity / altitude timelines,
+  a mission-state strip, computed flight stats, and CSV export for offline analysis.
+
+Built with **React + TanStack Start** and **roslib.js**, talking to `rosbridge_server` on the Pi. Lives in its
+own repository: **[follow-drone-guardian](https://github.com/EspiroFares/follow-drone-guardian)**.
+
+---
+
 ## Engineering deep-dives
 
 A few of the harder problems solved along the way — the kind of thing that doesn't show up in a feature list.
@@ -188,7 +211,7 @@ the command stream had replaced that with something weaker. The fix was a contin
 height. Root cause #2 made it interesting: the loop read altitude from `/mavros/local_position/odom` — which
 is **permanently empty on a GPS-denied vehicle**, because ArduPilot never sets an EKF origin and therefore
 never emits `LOCAL_POSITION_NED`. The altitude controller had silently never executed. The final design reads
-the downward lidar directly (which is also the better reference for "1.5 m above the floor") — and a
+the downward lidar directly (which is also the better reference for "~1.2 m above the floor") — and a
 deadband was deliberately *removed*, since a deadband on a velocity-commanded altitude loop creates a
 drift-and-correct limit cycle. Continuous small corrections are exactly what LOITER does internally.
 
@@ -236,6 +259,53 @@ ordering constraint in the offboard-control contract that the bridge node has to
 
 </details>
 
+<details>
+<summary><b>A multi-week altitude bob that lived in a single estimator parameter</b></summary>
+
+<br>
+
+For weeks the drone refused to hold a clean altitude in GUIDED — it bobbed ~10–15 cm and, worse, seemed
+unable to climb past ~1.1 m, while STABILIZE climbed freely. Stack, battery, surface-tracking mode and a
+dozen parameters were eliminated one by one from flight logs. The real cause was in the EKF3 vertical
+channel: propwash and airframe vibration were corrupting the IMU-derived vertical velocity, and the estimator
+was trusting it over the clean lidar. Down-weighting that vibration-corrupted velocity and tightening the
+rangefinder's trust (`EK3_RNG_M_NSE`, `RNGFND_FILT`) let the estimator lean on the lidar it should have
+trusted all along — height-hold standard deviation during motion dropped to ~5 cm. The lesson: not every
+"control" problem is in the controller — sometimes the loop is fine and the *estimate* it closes on is the bug.
+
+</details>
+
+<details>
+<summary><b>The drone dipped every time it flew forward — a downward lidar that lies when the airframe tilts</b></summary>
+
+<br>
+
+With altitude hold finally solid in a hover, a subtler artifact showed up in the follow: the drone sank a few
+centimeters every time it accelerated forward and recovered as it stopped — "forward = down, backward = up."
+Flight-log analysis ruled out a control limit cycle (altitude noise was nearly identical moving vs. hovering),
+which pointed at geometry. To translate, a multirotor pitches; the body-fixed downward lidar then measures a
+**slanted** range, `height / cos(pitch)`, and reads *too high* — so the altitude P-loop saw "too high" and
+commanded down, actively driving the dip. The fix projects the raw range back onto vertical using the FC's
+attitude quaternion (`height = range · cos(pitch) · cos(roll)`, the `R₃₃` term) before it reaches the
+controller, with a graceful fallback to the raw range if attitude is briefly unavailable. The directional
+coupling vanished — measured forward-vs-backward drift dropped to noise.
+
+</details>
+
+<details>
+<summary><b>Yaw that was either too slow or oscillating — until it accounted for distance</b></summary>
+
+<br>
+
+Steering-to-center felt sluggish when tracking someone at range, yet twitchy and oscillation-prone up close.
+The two complaints share one cause: yaw is driven by the *bearing* angle `atan2(y, x)`, and at close range a
+small sideways step produces a large bearing swing — so a fixed gain over-reacts near the drone and
+under-reacts far away. The control law now scales the yaw gain with distance (gentle inside a reference
+radius, full authority beyond it, with a floor so it never stops facing you). Combined with a bearing-based —
+never lateral-offset — error, it holds a smooth lock across the whole follow envelope.
+
+</details>
+
 ---
 
 ## Technology stack
@@ -248,6 +318,7 @@ ordering constraint in the offboard-control contract that the bridge node has to
 | **Flight control** | ArduPilot (Copter), MAVLink 2 via MAVROS over UART |
 | **Simulation** | Gazebo Harmonic, ArduPilot SITL, `ros_gz_bridge` |
 | **Build / tooling** | CMake, `ament_cmake`, colcon |
+| **Ground station** | React + TanStack Start, roslib.js, `rosbridge_server` |
 | **Hardware** | Raspberry Pi 4 (Ubuntu 24.04, native) · ArduPilot FC · Pi Camera · TF-Luna LiDAR · optical-flow sensor |
 
 ---
@@ -263,13 +334,14 @@ Honest split between what runs in simulation and what's proven on the real aircr
 | Mission state machine + follow control | ✅ end-to-end | ✅ flight-tested person following |
 | Lidar-referenced altitude hold in GUIDED | — | ✅ |
 | `fcu_bridge_node` (MAVROS gateway) | ✅ | ✅ over UART |
+| Live parameter tuning (ROS params + web dashboard) | ✅ | ✅ runtime, no rebuild |
 | Stale-data watchdogs + crash-safe degradation | — | ✅ any node crash → stable hover |
 | Safety supervisor / failsafe nodes | 🔧 next build target | 🔧 next build target |
 
 **Component breakdown**
 
-- **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `image_preprocessing`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing
-- **Next:** `safety_supervision_node`, `hold_failsafe_node` (the `drone_safety` package) · preflight check script · runtime-tunable ROS parameters · camera calibration
+- **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `image_preprocessing`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing · runtime-tunable ROS parameters · browser tuning dashboard (rosbridge)
+- **Next:** `safety_supervision_node`, `hold_failsafe_node` (the `drone_safety` package) · preflight check script · camera calibration
 
 ---
 
@@ -362,8 +434,9 @@ replace the FC and the perception pipeline respectively.
 - [x] Raspberry Pi 4 companion-computer integration (native, no container)
 - [x] Autonomous person-following on the real aircraft
 - [x] Stale-data watchdogs — crash-safe degradation to hover
+- [x] Runtime-tunable ROS parameters + browser tuning dashboard
 - [ ] Safety supervisor + failsafe (`drone_safety`)
-- [ ] Preflight check script + runtime-tunable ROS parameters
+- [ ] Preflight check script
 - [ ] Camera calibration (metric distance accuracy)
 
 ---
