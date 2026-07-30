@@ -75,10 +75,13 @@ The stack is organized in clean layers. Data flows up from sensors into a world 
 control logic, and back down to the flight controller — crossing the hardware boundary at exactly one place.
 
 ### System overview
-![System Overview](docs/architecture/System_Overview.drawio.png)
+![System Overview](docs/architecture/system_overview.png)
 
 ### ROS 2 node / topic graph
-![ROS 2 Architecture](docs/architecture/ROS_architecture.drawio-3.png)
+![ROS 2 Architecture](docs/architecture/ros_architecture.png)
+
+> Both figures are generated from a single source of truth —
+> `python3 docs/architecture/generate_diagrams.py` — so they stay in step with the code.
 
 ---
 
