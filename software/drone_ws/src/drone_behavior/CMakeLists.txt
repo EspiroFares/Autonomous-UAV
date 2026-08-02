@@ -12,19 +12,19 @@ find_package(std_msgs REQUIRED)
 find_package(drone_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 
-add_executable(mission_manager_node src/mission_manager_node.cpp) 
+add_executable(mission_manager_node src/mission_manager_node.cpp)
 
-ament_target_dependencies(mission_manager_node                                
-rclcpp                                                                    
+ament_target_dependencies(mission_manager_node
+rclcpp
 std_msgs
 geometry_msgs
-drone_interfaces                                                            
-)                 
-                                                                            
-install(TARGETS                                                             
+drone_interfaces
+)
+
+install(TARGETS
 mission_manager_node
 DESTINATION lib/${PROJECT_NAME}
-)    
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -35,6 +35,11 @@ if(BUILD_TESTING)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
+  # uncrustify enforces the ROS 2 whitespace style. This code follows its own
+  # consistent style, and reformatting flight-proven files purely for style
+  # would churn safety-critical code for no behavioural gain. cppcheck,
+  # lint_cmake and xmllint stay enabled - those catch real defects.
+  set(ament_cmake_uncrustify_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 

@@ -8,7 +8,7 @@ Perception, world modeling, mission logic, control and safety run on a Raspberry
 A separate flight controller owns stabilization and hover. Everything is developed and validated in
 simulation first, then deployed to hardware — where it now flies and follows for real.
 
-[![CI](https://github.com/EspiroFares/Drone/actions/workflows/ci.yml/badge.svg)](https://github.com/EspiroFares/Drone/actions/workflows/ci.yml)
+[![CI](https://github.com/EspiroFares/Autonomous-UAV/actions/workflows/ci.yml/badge.svg)](https://github.com/EspiroFares/Autonomous-UAV/actions/workflows/ci.yml)
 [![ROS 2](https://img.shields.io/badge/ROS_2-Jazzy-22314E?logo=ros&logoColor=white)](https://docs.ros.org/en/jazzy/)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)](https://isocpp.org/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
