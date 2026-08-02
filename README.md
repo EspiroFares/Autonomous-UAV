@@ -342,9 +342,17 @@ Honest split between what runs in simulation and what's proven on the real aircr
 | Stale-data watchdogs + crash-safe degradation | — | ✅ any node crash → stable hover |
 | Safety supervisor / failsafe nodes | 🔧 next build target | 🔧 next build target |
 
+**Verification.** Every push builds the whole workspace in a ROS 2 Jazzy container and runs
+24 unit tests, `cppcheck`, and the ROS linters. The tests cover the two places where a wrong
+number does real damage: the monocular range model (pinhole fit, median filter, and the
+physics gate that rejects impossible target motion) and the velocity envelope that
+`setpoint_validation_node` applies to every command before it reaches the flight controller.
+A separate job regenerates the architecture diagrams and fails if the committed figures have
+drifted from the code.
+
 **Component breakdown**
 
-- **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing · runtime-tunable ROS parameters · browser tuning dashboard (rosbridge)
+- **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing · runtime-tunable ROS parameters · browser tuning dashboard (rosbridge) · CI with unit tests on the range model and the velocity envelope
 - **Next:** `safety_supervision_node`, `hold_failsafe_node` (the `drone_safety` package) · preflight check script · camera calibration
 
 ---
@@ -440,6 +448,7 @@ replace the FC and the perception pipeline respectively.
 - [x] Autonomous person-following on the real aircraft
 - [x] Stale-data watchdogs — crash-safe degradation to hover
 - [x] Runtime-tunable ROS parameters + browser tuning dashboard
+- [x] CI: workspace build, unit tests and linters on every push
 - [ ] Safety supervisor + failsafe (`drone_safety`)
 - [ ] Preflight check script
 - [ ] Camera calibration (metric distance accuracy)
