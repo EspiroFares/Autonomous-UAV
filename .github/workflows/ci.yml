@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & test (ROS 2 Jazzy)
+    runs-on: ubuntu-latest
+    container: ros:jazzy-ros-base
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git
+          rosdep update --rosdistro jazzy
+          rosdep install --from-paths software/drone_ws/src --ignore-src -y
+
+      - name: Build
+        working-directory: software/drone_ws
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --event-handlers console_direct+
+
+      - name: Test
+        working-directory: software/drone_ws
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test --event-handlers console_direct+
+          colcon test-result --verbose
+
+  diagrams:
+    name: Architecture diagrams are up to date
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The figures are generated from generate_diagrams.py. Regenerate them and
+      # fail if the committed SVGs differ — that keeps the README from drifting
+      # away from the code. Only the SVGs are checked; PNG bytes depend on the
+      # local librsvg version and are not reproducible across machines.
+      - name: Regenerate
+        run: python3 docs/architecture/generate_diagrams.py
+
+      - name: Fail if the committed diagrams are stale
+        run: git diff --exit-code -- docs/architecture/*.svg
