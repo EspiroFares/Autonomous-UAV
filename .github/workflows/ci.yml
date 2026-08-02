@@ -33,6 +33,11 @@ jobs:
 
       - name: Test
         working-directory: software/drone_ws
+        env:
+          # ament refuses to run cppcheck 2.13 (the version Jazzy ships) because
+          # it is slow on large code bases. This one is ten small files, so the
+          # analysis is worth far more than the seconds it costs.
+          AMENT_CPPCHECK_ALLOW_SLOW_VERSIONS: "1"
         run: |
           source /opt/ros/jazzy/setup.bash
           colcon test --event-handlers console_direct+
