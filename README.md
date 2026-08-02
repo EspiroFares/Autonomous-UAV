@@ -353,7 +353,7 @@ drifted from the code.
 **Component breakdown**
 
 - **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing · runtime-tunable ROS parameters · browser tuning dashboard (rosbridge) · CI with unit tests on the range model and the velocity envelope
-- **Next:** `safety_supervision_node`, `hold_failsafe_node` (the `drone_safety` package) · preflight check script · camera calibration
+- **Next:** `safety_supervision_node`, `hold_failsafe_node` (the `drone_safety` package) · preflight check script · target reacquisition after TARGET_LOST
 
 ---
 
@@ -448,10 +448,12 @@ replace the FC and the perception pipeline respectively.
 - [x] Autonomous person-following on the real aircraft
 - [x] Stale-data watchdogs — crash-safe degradation to hover
 - [x] Runtime-tunable ROS parameters + browser tuning dashboard
+- [x] Ground-fitted range calibration (shoulder and torso, least-squares)
+- [x] Physics gate — reject target jumps no person could make
 - [x] CI: workspace build, unit tests and linters on every push
 - [ ] Safety supervisor + failsafe (`drone_safety`)
 - [ ] Preflight check script
-- [ ] Camera calibration (metric distance accuracy)
+- [ ] Target reacquisition after TARGET_LOST
 
 ---
 
