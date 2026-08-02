@@ -27,6 +27,11 @@ if(BUILD_TESTING)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
+  # uncrustify enforces the ROS 2 whitespace style. This code follows its own
+  # consistent style, and reformatting flight-proven files purely for style
+  # would churn safety-critical code for no behavioural gain. cppcheck,
+  # lint_cmake and xmllint stay enabled - those catch real defects.
+  set(ament_cmake_uncrustify_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 

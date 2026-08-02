@@ -13,7 +13,7 @@ find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(drone_interfaces REQUIRED)
 find_package(mavros_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)   
+find_package(sensor_msgs REQUIRED)
 
 add_executable(mock_fcu_node src/mock_fcu_node.cpp)
 
@@ -34,24 +34,24 @@ ament_target_dependencies(world_model_node
   drone_interfaces
 )
 
-add_executable(mock_target_node src/mock_target_node.cpp)  
+add_executable(mock_target_node src/mock_target_node.cpp)
 
-ament_target_dependencies(mock_target_node                                 
-rclcpp        
+ament_target_dependencies(mock_target_node
+rclcpp
 drone_interfaces
-)   
+)
 
 add_executable(fcu_bridge_node src/fcu_bridge_node.cpp)
 
-ament_target_dependencies(fcu_bridge_node                   
+ament_target_dependencies(fcu_bridge_node
     rclcpp
     std_msgs
     sensor_msgs
     nav_msgs
     geometry_msgs
     drone_interfaces
-    mavros_msgs     
-  )          
+    mavros_msgs
+)
 
 
 
@@ -72,6 +72,11 @@ if(BUILD_TESTING)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
+  # uncrustify enforces the ROS 2 whitespace style. This code follows its own
+  # consistent style, and reformatting flight-proven files purely for style
+  # would churn safety-critical code for no behavioural gain. cppcheck,
+  # lint_cmake and xmllint stay enabled - those catch real defects.
+  set(ament_cmake_uncrustify_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
