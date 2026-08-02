@@ -28,3 +28,7 @@ scratchpad/
 AGENTS.md
 HANDOFF.md
 docs/CLAUDE.md
+
+# Python
+__pycache__/
+*.pyc
