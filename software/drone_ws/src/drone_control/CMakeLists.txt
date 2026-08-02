@@ -30,6 +30,9 @@ ament_target_dependencies(setpoint_validation_node
     drone_interfaces
 )
 
+target_include_directories(setpoint_validation_node PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 install(TARGETS
   follow_controller_node
   setpoint_validation_node
@@ -51,6 +54,12 @@ if(BUILD_TESTING)
   # lint_cmake and xmllint stay enabled - those catch real defects.
   set(ament_cmake_uncrustify_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
+
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_setpoint_limits test/test_setpoint_limits.cpp)
+  target_include_directories(test_setpoint_limits PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  ament_target_dependencies(test_setpoint_limits drone_interfaces)
 endif()
 
 ament_package()
