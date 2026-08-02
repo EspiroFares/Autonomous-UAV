@@ -26,11 +26,20 @@ ament_target_dependencies(person_tracker_node rclcpp sensor_msgs drone_interface
 
 add_executable(target_estimator_node src/target_estimator_node.cpp)
 ament_target_dependencies(target_estimator_node rclcpp sensor_msgs drone_interfaces geometry_msgs)
+target_include_directories(target_estimator_node PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 install(TARGETS
   person_tracker_node
   target_estimator_node
   DESTINATION lib/${PROJECT_NAME}
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(test_range_model test/test_range_model.cpp)
+  target_include_directories(test_range_model PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+endif()
 
 ament_package()

@@ -10,11 +10,11 @@
 #include <deque>
 #include <functional>
 #include <memory>
-#include <vector>
 
 #include "rclcpp/rclcpp.hpp"
 #include "drone_interfaces/msg/track.hpp"
 #include "drone_interfaces/msg/target_state.hpp"
+#include "drone_perception/range_model.hpp"
 
 class TargetEstimatorNode : public rclcpp::Node {
 public:
@@ -139,28 +139,22 @@ private:
             torso_pixel_window_.clear();
         }
 
-        // Calibrated inverse model: distance = scale / width_px + offset, with
-        // scale and offset fit on the ground for shoulder and torso separately.
-        const float shoulder_distance =
-            shoulder_scale_ /
-            (filtered_shoulder_width_px + 1e-6f) +
-            shoulder_offset_;
-        const float torso_distance =
-            torso_scale_ /
-            (filtered_torso_height_px + 1e-6f) +
-            torso_offset_;
+        // Calibrated inverse model, fit on the ground for shoulder and torso
+        // separately. See drone_perception/range_model.hpp.
+        const float shoulder_distance = drone_perception::RangeFromPixels(
+            filtered_shoulder_width_px, shoulder_scale_, shoulder_offset_);
+        const float torso_distance = drone_perception::RangeFromPixels(
+            filtered_torso_height_px, torso_scale_, torso_offset_);
 
         const bool shoulder_distance_valid =
             shoulder_pixels_valid &&
-            std::isfinite(shoulder_distance) &&
-            shoulder_distance >= min_distance_ &&
-            shoulder_distance <= max_distance_;
+            drone_perception::IsRangePlausible(
+                shoulder_distance, min_distance_, max_distance_);
 
         const bool torso_distance_valid =
             torso_pixels_valid &&
-            std::isfinite(torso_distance) &&
-            torso_distance >= min_distance_ &&
-            torso_distance <= max_distance_;
+            drone_perception::IsRangePlausible(
+                torso_distance, min_distance_, max_distance_);
 
         target.shoulder_distance_estimate =
             shoulder_distance_valid ? shoulder_distance : 0.0f;
@@ -289,11 +283,11 @@ private:
             const float implied_speed =
                 distance_jump / sample_dt;
 
-            // Physics gate: reject a jump that implies impossible human motion
-            // (both a large step and a high implied speed). It's almost always
-            // a perception spike, and acting on it would lunge the drone.
-            if (distance_jump > kMaxDistanceJump &&
-                implied_speed > kMaxDistanceRate)
+            // Physics gate: reject a jump that implies impossible human motion.
+            // It's almost always a perception spike, and acting on it would
+            // lunge the drone. See drone_perception/range_model.hpp.
+            if (drone_perception::IsImpossibleJump(
+                    distance_jump, sample_dt, motion_gate_))
             {
                 RCLCPP_WARN_THROTTLE(
                     this->get_logger(),
@@ -334,22 +328,8 @@ private:
         std::deque<float> & window,
         const float sample)
     {
-        window.push_back(sample);
-        while (window.size() > median_window_size_) {
-            window.pop_front();
-        }
-
-        std::vector<float> sorted(window.begin(), window.end());
-        std::sort(sorted.begin(), sorted.end());
-
-        const std::size_t middle = sorted.size() / 2;
-        if (sorted.size() % 2 == 0) {
-            return 0.5f * (
-                sorted[middle - 1] +
-                sorted[middle]);
-        }
-
-        return sorted[middle];
+        return drone_perception::PushMedian(
+            window, sample, median_window_size_);
     }
 
     void ResetDistanceState()
@@ -394,8 +374,6 @@ private:
 
     static constexpr float kMinShoulderWidthPx = 35.0f;
     static constexpr float kMinTorsoHeightPx = 30.0f;
-    static constexpr float kMaxDistanceJump = 1.0f;
-    static constexpr float kMaxDistanceRate = 4.0f;
     static constexpr float kMaxSampleGap = 0.75f;
     static constexpr float kMaxReacquisitionGap = 1.0f;
     static constexpr float kReacquisitionTolerance = 0.5f;
@@ -424,6 +402,7 @@ private:
     float min_distance_;
     float max_distance_;
     std::size_t median_window_size_;
+    drone_perception::MotionGate motion_gate_;
     std::deque<float> shoulder_pixel_window_;
     std::deque<float> torso_pixel_window_;
 };
