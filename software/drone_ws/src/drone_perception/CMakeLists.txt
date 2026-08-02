@@ -11,10 +11,9 @@ find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(drone_interfaces REQUIRED)
-find_package(cv_bridge REQUIRED)
-find_package(OpenCV REQUIRED)
 
-# Python nodes. Keep MediaPipe in Python; camera/preprocess/tracking/estimation stay C++.
+# Python nodes. picamera2 and MediaPipe have no usable C++ API, so camera capture
+# and detection stay in Python; tracking and estimation are C++.
 install(PROGRAMS
   drone_perception/camera_driver_node.py
   drone_perception/person_detector_node.py
@@ -22,12 +21,6 @@ install(PROGRAMS
 )
 
 # C++ nodes
-add_executable(camera_driver_node src/camera_driver_node.cpp)
-ament_target_dependencies(camera_driver_node rclcpp sensor_msgs cv_bridge OpenCV)
-
-add_executable(image_preprocessing_node src/image_preprocessing_node.cpp)
-ament_target_dependencies(image_preprocessing_node rclcpp sensor_msgs cv_bridge OpenCV)
-
 add_executable(person_tracker_node src/person_tracker_node.cpp)
 ament_target_dependencies(person_tracker_node rclcpp sensor_msgs drone_interfaces)
 
@@ -35,8 +28,6 @@ add_executable(target_estimator_node src/target_estimator_node.cpp)
 ament_target_dependencies(target_estimator_node rclcpp sensor_msgs drone_interfaces geometry_msgs)
 
 install(TARGETS
-  camera_driver_node
-  image_preprocessing_node
   person_tracker_node
   target_estimator_node
   DESTINATION lib/${PROJECT_NAME}

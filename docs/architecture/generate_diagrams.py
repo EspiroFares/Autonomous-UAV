@@ -174,15 +174,11 @@ class Fig:
 # System Architecture Overview
 # ═════════════════════════════════════════════════════════════════════════════
 def system_overview():
-    W, H = 2010, 910
+    W, H = 2010, 880
     f = Fig(W, H)
     f.header("System Architecture Overview",
              "Vision on the companion computer decides where to go; the flight "
              "controller keeps the aircraft in the air.")
-    f.footnote(885,
-               "image_preprocessing_node exists in drone_perception but is not "
-               "launched — person_detector_node reads /camera/image_raw "
-               "directly.")
 
     f.legend(W - 30, 30, [
         (EDGE, None, "Primary data / command flow"),
@@ -286,15 +282,11 @@ def system_overview():
 # ROS Node & Topic Graph
 # ═════════════════════════════════════════════════════════════════════════════
 def ros_graph():
-    W, H = 1965, 910
+    W, H = 1965, 880
     f = Fig(W, H)
     f.header("ROS Node & Topic Graph",
              "Arrows follow ROS publish → subscribe direction; labels show the "
              "topic name carried on each link.")
-    f.footnote(885,
-               "image_preprocessing_node is built but not launched, so it is "
-               "not part of the running graph — person_detector_node "
-               "subscribes to /camera/image_raw directly.")
 
     f.legend(W - 30, 30, [
         (EDGE, None, "ROS 2 topic"),
