@@ -2,8 +2,8 @@
 <package format="3">
   <name>drone_interfaces</name>
   <version>0.0.0</version>
-  <description>Custom ROS 2 interfaces for the drone project</description>
-  <maintainer email="test@example.com">test</maintainer>
+  <description>Custom messages shared across the stack: Detection, Track, TargetState, ControlSetpoint, MissionState and VehicleStatus. Built first.</description>
+  <maintainer email="faresespiro535@gmail.com">Fares Espiro</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
