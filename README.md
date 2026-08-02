@@ -101,9 +101,9 @@ control logic, and back down to the flight controller — crossing the hardware 
 A streaming ROS 2 pipeline turns raw frames into a metric target estimate:
 
 ```
-camera  ─►  image_preprocessing  ─►  person_detector   ─►  person_tracker  ─►  target_estimator  ─►  /target/state
-(Pi camera        (resize,            (MediaPipe Pose,       (EMA smoothing)    (pinhole geometry:
- via picamera2     normalize)          shoulder landmarks)                       distance + yaw error)
+camera  ─►  person_detector   ─►  person_tracker  ─►  target_estimator  ─►  /target/state
+(Pi camera     (MediaPipe Pose,     (EMA smoothing)    (pinhole geometry:
+ via picamera2  shoulder landmarks)                     distance + yaw error)
  or Gazebo)
 ```
 
@@ -343,7 +343,7 @@ Honest split between what runs in simulation and what's proven on the real aircr
 
 **Component breakdown**
 
-- **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `image_preprocessing`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing · runtime-tunable ROS parameters · browser tuning dashboard (rosbridge)
+- **Done:** `drone_interfaces` (custom messages) · full perception pipeline (`camera_driver`, `person_detector`, `person_tracker`, `target_estimator`) · `world_model` · `mission_manager` · `follow_controller` with altitude hold · `setpoint_validation` · `fcu_bridge` · single-command launch with auto-respawn · mock nodes for hardware-free testing · runtime-tunable ROS parameters · browser tuning dashboard (rosbridge)
 - **Next:** `safety_supervision_node`, `hold_failsafe_node` (the `drone_safety` package) · preflight check script · camera calibration
 
 ---
@@ -357,15 +357,16 @@ Honest split between what runs in simulation and what's proven on the real aircr
 
 ```text
 Autonomous-UAV/
-├── docs/architecture/        # System + ROS graph diagrams (draw.io + PNG)
+├── docs/architecture/        # Diagram generator (generate_diagrams.py) + rendered SVG/PNG
 └── software/drone_ws/src/
     ├── drone_interfaces/     # Custom .msg definitions (built first)
     ├── drone_perception/     # Camera → MediaPipe Pose → tracker → distance estimate
     ├── drone_state/          # fcu_bridge, world_model, mock FC/target
     ├── drone_behavior/       # Mission state machine
     ├── drone_control/        # Follow controller (incl. altitude hold) + setpoint validation
-    ├── drone_bringup/        # Launch (MAVROS + stream setup + full stack, respawn)
-    └── drone_safety/         # Safety supervisor + failsafe (next up)
+    └── drone_bringup/        # Launch (MAVROS + stream setup + full stack, respawn)
+
+drone_safety/ (safety supervisor + failsafe) is designed but not written yet — see Project status.
 ```
 
 </details>

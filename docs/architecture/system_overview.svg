@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2010" height="880" viewBox="0 0 2010 880" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<defs>
+<linearGradient id="grad_blue" x1="0" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#5B93D6"/><stop offset="1" stop-color="#35679F"/></linearGradient>
+<linearGradient id="grad_orange" x1="0" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#DD8C3C"/><stop offset="1" stop-color="#B96A1C"/></linearGradient>
+<linearGradient id="grad_green" x1="0" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#4CAE72"/><stop offset="1" stop-color="#2E8551"/></linearGradient>
+<linearGradient id="grad_red" x1="0" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#D75E52"/><stop offset="1" stop-color="#AE3A30"/></linearGradient>
+<linearGradient id="grad_purple" x1="0" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#B15FD0"/><stop offset="1" stop-color="#8A34A9"/></linearGradient>
+<linearGradient id="grad_gold" x1="0" y1="0" x2="0.25" y2="1"><stop offset="0" stop-color="#D8B03C"/><stop offset="1" stop-color="#AF8618"/></linearGradient>
+<marker id="arrow" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0.6 L 10 5 L 0 9.4 Z" fill="#D2D7DE"/></marker>
+<marker id="arrow_plan" viewBox="0 0 10 10" refX="9.2" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M 0 0.6 L 10 5 L 0 9.4 Z" fill="#E8A24C"/></marker>
+<filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/></filter>
+</defs>
+<rect width="2010" height="880" fill="#0B0E14"/>
+<text x="30.0" y="56.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#F2F5F9" text-anchor="start" letter-spacing="-0.3">System Architecture Overview</text>
+<text x="30.0" y="92.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="400" fill="#8B93A1" text-anchor="start" letter-spacing="0">Vision on the companion computer decides where to go; the flight controller keeps the aircraft in the air.</text>
+<rect x="1678.8" y="30.0" width="301.2" height="68.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.12" opacity="1.0"/>
+<path d="M 1696.8 50.0 L 1740.8 50.0" fill="none" stroke="#D2D7DE" stroke-width="2.4" stroke-linecap="butt" stroke-linejoin="miter"/>
+<text x="1754.8" y="54.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#AFB7C4" text-anchor="start" letter-spacing="0">Primary data / command flow</text>
+<path d="M 1696.8 72.0 L 1740.8 72.0" fill="none" stroke="#E8A24C" stroke-width="2.4" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8 6"/>
+<text x="1754.8" y="76.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#AFB7C4" text-anchor="start" letter-spacing="0">Planned — not implemented</text>
+<rect x="30.0" y="112.0" width="210.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="135.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">SENSORS / HARDWARE</text>
+<rect x="30.0" y="180.0" width="210.0" height="620.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<rect x="270.0" y="112.0" width="300.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="420.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">PERCEPTION</text>
+<rect x="270.0" y="180.0" width="300.0" height="500.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<rect x="600.0" y="112.0" width="240.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="720.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">STATE</text>
+<rect x="600.0" y="180.0" width="240.0" height="260.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<rect x="870.0" y="112.0" width="240.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="990.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">BEHAVIOR / MISSION</text>
+<rect x="870.0" y="180.0" width="240.0" height="260.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<rect x="1140.0" y="112.0" width="280.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="1280.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">CONTROL / SAFETY</text>
+<rect x="1140.0" y="180.0" width="280.0" height="626.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<rect x="1450.0" y="112.0" width="250.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="1575.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">VEHICLE INTERFACE</text>
+<rect x="1450.0" y="180.0" width="250.0" height="500.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<rect x="1730.0" y="112.0" width="250.0" height="44.0" rx="9" fill="#0E1219" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.1" opacity="1.0"/>
+<text x="1855.0" y="141.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.5" font-weight="600" fill="#98A1AE" text-anchor="middle" letter-spacing="1.6">FLIGHT CONTROLLER</text>
+<rect x="1730.0" y="180.0" width="250.0" height="620.0" rx="15" fill="#11151D" stroke="#FFFFFF" stroke-width="1" stroke-opacity="0.07" opacity="1.0"/>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="48.0" y="230.0" width="174.0" height="60.0" rx="11" fill="url(#grad_blue)" stroke="#7FB0E6" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="135.0" y="265.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Pi Camera</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="48.0" y="470.0" width="174.0" height="60.0" rx="11" fill="url(#grad_blue)" stroke="#7FB0E6" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="135.0" y="505.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Downward Lidar</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="48.0" y="590.0" width="174.0" height="60.0" rx="11" fill="url(#grad_blue)" stroke="#7FB0E6" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="135.0" y="625.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Optical Flow</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="48.0" y="710.0" width="174.0" height="60.0" rx="11" fill="url(#grad_blue)" stroke="#7FB0E6" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="135.0" y="745.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">IMU / Baro</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="288.0" y="230.0" width="264.0" height="60.0" rx="11" fill="url(#grad_green)" stroke="#6ECB92" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="420.0" y="265.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Camera Driver</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="288.0" y="350.0" width="264.0" height="60.0" rx="11" fill="url(#grad_green)" stroke="#6ECB92" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="420.0" y="385.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Person Detection</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="288.0" y="470.0" width="264.0" height="60.0" rx="11" fill="url(#grad_green)" stroke="#6ECB92" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="420.0" y="505.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Person Tracking</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="288.0" y="590.0" width="264.0" height="60.0" rx="11" fill="url(#grad_green)" stroke="#6ECB92" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="420.0" y="625.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Target Estimation</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="618.0" y="350.0" width="204.0" height="60.0" rx="11" fill="url(#grad_orange)" stroke="#EFA85E" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="720.0" y="385.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">World Model</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="888.0" y="350.0" width="204.0" height="60.0" rx="11" fill="url(#grad_red)" stroke="#EC8074" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="990.0" y="385.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Mission Manager</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1158.0" y="350.0" width="244.0" height="60.0" rx="11" fill="url(#grad_purple)" stroke="#C982E2" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1280.0" y="385.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Follow Controller</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1158.0" y="470.0" width="244.0" height="60.0" rx="11" fill="url(#grad_purple)" stroke="#C982E2" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1280.0" y="505.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Setpoint Validation</text>
+</g>
+<g opacity="0.42">
+<rect x="1158.0" y="590.0" width="244.0" height="60.0" rx="11" fill="url(#grad_purple)" stroke="#C982E2" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0" stroke-dasharray="7 5"/>
+<text x="1280.0" y="625.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Hold / Failsafe</text>
+</g>
+<text x="1280.0" y="667.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#6E7889" text-anchor="middle" letter-spacing="0">planned</text>
+<g opacity="0.42">
+<rect x="1158.0" y="710.0" width="244.0" height="60.0" rx="11" fill="url(#grad_purple)" stroke="#C982E2" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0" stroke-dasharray="7 5"/>
+<text x="1280.0" y="745.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Safety Supervision</text>
+</g>
+<text x="1280.0" y="787.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#6E7889" text-anchor="middle" letter-spacing="0">planned</text>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1468.0" y="470.0" width="214.0" height="60.0" rx="11" fill="url(#grad_orange)" stroke="#EFA85E" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1575.0" y="505.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">FCU Bridge</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1468.0" y="590.0" width="214.0" height="60.0" rx="11" fill="url(#grad_orange)" stroke="#EFA85E" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1575.0" y="625.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">MAVROS</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1748.0" y="350.0" width="214.0" height="60.0" rx="11" fill="url(#grad_gold)" stroke="#EAC85F" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1855.0" y="385.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Motor Mixer + ESC</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1748.0" y="470.0" width="214.0" height="60.0" rx="11" fill="url(#grad_gold)" stroke="#EAC85F" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1855.0" y="505.6" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">Attitude &amp; Rate Loops</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1748.0" y="590.0" width="214.0" height="60.0" rx="11" fill="url(#grad_gold)" stroke="#EAC85F" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1855.0" y="625.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14.0" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">GUIDED Velocity Control</text>
+</g>
+<g opacity="1.0">
+<g filter="url(#shadow)">
+<rect x="1748.0" y="710.0" width="214.0" height="60.0" rx="11" fill="url(#grad_gold)" stroke="#EAC85F" stroke-width="1.3" stroke-opacity="0.55" opacity="1.0"/>
+</g>
+<text x="1855.0" y="745.8" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.1">EKF3 Sensor Fusion</text>
+</g>
+<path d="M 222.0 260.0 L 288.0 260.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 420.0 290.0 L 420.0 350.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 420.0 410.0 L 420.0 470.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 420.0 530.0 L 420.0 590.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 552.0 620.0 L 585.0 620.0 L 585.0 380.0 L 618.0 380.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 822.0 372.0 L 888.0 372.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1092.0 372.0 L 1158.0 372.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 700.0 350.0 L 700.0 288.0 L 1230.0 288.0 L 1230.0 350.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1280.0 410.0 L 1280.0 470.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1402.0 490.0 L 1468.0 490.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1575.0 530.0 L 1575.0 590.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1682.0 620.0 L 1748.0 620.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1855.0 710.0 L 1855.0 650.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1855.0 590.0 L 1855.0 530.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1855.0 470.0 L 1855.0 410.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<path d="M 1650.0 470.0 L 1650.0 250.0 L 760.0 250.0 L 760.0 350.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="1200.0" y="238.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#A9B1BE" text-anchor="middle" letter-spacing="0">vehicle state  ·  /vehicle/status  ·  /vehicle/odom</text>
+<path d="M 1468.0 485.0 L 1428.0 485.0 L 1428.0 380.0 L 1402.0 380.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="1440.0" y="440.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#A9B1BE" text-anchor="start" letter-spacing="0">altitude · /vehicle/height</text>
+<path d="M 1240.0 530.0 L 1240.0 590.0" fill="none" stroke="#E8A24C" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8 6" marker-end="url(#arrow_plan)"/>
+<path d="M 1330.0 710.0 L 1330.0 650.0" fill="none" stroke="#E8A24C" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8 6" marker-end="url(#arrow_plan)"/>
+<text x="1342.0" y="688.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13" font-weight="400" fill="#E8A24C" text-anchor="start" letter-spacing="0">veto</text>
+<path d="M 1402.0 620.0 L 1442.0 620.0 L 1442.0 515.0 L 1468.0 515.0" fill="none" stroke="#E8A24C" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" stroke-dasharray="8 6" marker-end="url(#arrow_plan)"/>
+<path d="M 222.0 500.0 L 252.0 500.0 L 252.0 840.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"/>
+<circle cx="252.0" cy="500.0" r="4" fill="#D2D7DE"/>
+<path d="M 222.0 620.0 L 252.0 620.0 L 252.0 840.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"/>
+<circle cx="252.0" cy="620.0" r="4" fill="#D2D7DE"/>
+<path d="M 222.0 740.0 L 252.0 740.0 L 252.0 840.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter"/>
+<circle cx="252.0" cy="740.0" r="4" fill="#D2D7DE"/>
+<path d="M 252.0 840.0 L 1855.0 840.0 L 1855.0 770.0" fill="none" stroke="#D2D7DE" stroke-width="2" stroke-linecap="butt" stroke-linejoin="miter" marker-end="url(#arrow)"/>
+<text x="1040.0" y="828.0" font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="13.5" font-weight="400" fill="#A9B1BE" text-anchor="middle" letter-spacing="0">wired directly to the flight controller — the Pi never reads them</text>
+
+</svg>

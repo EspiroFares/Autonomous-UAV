@@ -18,3 +18,13 @@ software/drone_ws/log/
 # Media / genererade filer
 bevis.jpg
 *.mp4
+
+# macOS junk
+.DS_Store
+.Rhistory
+scratchpad/
+
+# Agent-facing working docs (not part of the public repo)
+AGENTS.md
+HANDOFF.md
+docs/CLAUDE.md
