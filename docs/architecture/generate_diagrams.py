@@ -182,7 +182,7 @@ def system_overview():
 
     f.legend(W - 30, 30, [
         (EDGE, None, "Primary data / command flow"),
-        (PLAN, "8 6", "Planned — not implemented"),
+        (PLAN, "8 6", "Built, not yet wired into the flight path"),
     ])
 
     PY = 180
@@ -218,8 +218,8 @@ def system_overview():
 
     box(4, 350, "Follow Controller", "purple")
     box(4, 470, "Setpoint Validation", "purple")
-    box(4, 590, "Hold / Failsafe", "purple", ghost=True, caption="planned")
-    box(4, 710, "Safety Supervision", "purple", ghost=True, caption="planned")
+    box(4, 590, "Hold / Failsafe", "purple")
+    box(4, 710, "Safety Supervision", "purple")
 
     box(5, 470, "FCU Bridge", "orange")
     box(5, 590, "MAVROS", "orange")
@@ -257,14 +257,15 @@ def system_overview():
     f.line([(1468, 485), (1428, 485), (1428, 380), (1402, 380)])
     f.text(1440, 440, "altitude · /vehicle/height", size=13, fill=LABEL)
 
-    # ── planned safety chain ────────────────────────────────────────────────
-    f.line([(1240, 530), (1240, 590)], stroke=PLAN, dash="8 6",
-           marker="arrow_plan")
-    f.line([(1330, 710), (1330, 650)], stroke=PLAN, dash="8 6",
-           marker="arrow_plan")
-    f.text(1342, 688, "veto", size=13, fill=PLAN)
+    # ── safety chain ────────────────────────────────────────────────────────
+    f.line([(1240, 530), (1240, 590)])
+    f.line([(1330, 710), (1330, 650)])
+    f.text(1342, 688, "veto", size=13, fill=LABEL)
+    # Built and running, but fcu_bridge still reads setpoint_validated. The
+    # switch is the last step, after both nodes are ground-tested.
     f.line([(1402, 620), (1442, 620), (1442, 515), (1468, 515)],
            stroke=PLAN, dash="8 6", marker="arrow_plan")
+    f.text(1452, 570, "not wired in yet", size=12, fill=PLAN)
 
     # ── flight-critical sensors are wired to the FC, never to the Pi ────────
     for y in (500, 620, 740):
@@ -290,7 +291,7 @@ def ros_graph():
 
     f.legend(W - 30, 30, [
         (EDGE, None, "ROS 2 topic"),
-        (PLAN, "8 6", "Planned — drone_safety not implemented"),
+        (PLAN, "8 6", "Published, no subscriber yet"),
     ])
 
     PY = 180
@@ -323,8 +324,8 @@ def ros_graph():
 
     box(4, 350, "follow_controller_node", "purple")
     box(4, 470, "setpoint_validation_node", "purple")
-    box(4, 590, "hold_failsafe_node", "purple", ghost=True)
-    box(4, 710, "safety_supervision_node", "purple", ghost=True)
+    box(4, 590, "hold_failsafe_node", "purple")
+    box(4, 710, "safety_supervision_node", "purple")
 
     box(5, 470, "fcu_bridge_node", "orange")
     box(5, 630, "mavros", "orange")
@@ -383,12 +384,21 @@ def ros_graph():
     f.line([(1660, 470), (1660, 310), (1470, 310), (1470, 350)])
     lab(1565, 298, "/vehicle/height", anchor="middle")
 
-    # ── planned drone_safety chain ──────────────────────────────────────────
-    f.line([(1340, 530), (1340, 590)], stroke=PLAN, dash="8 6",
-           marker="arrow_plan")
-    f.line([(1470, 710), (1470, 650)], stroke=PLAN, dash="8 6",
-           marker="arrow_plan")
-    lab(1482, 688, "veto", fill=PLAN)
+    # ── drone_safety ────────────────────────────────────────────────────────
+    f.line([(1340, 530), (1340, 590)])
+    lab(1328, 566, "/control/setpoint_validated", anchor="end")
+
+    f.line([(1268, 515), (1232, 515), (1232, 740), (1268, 740)])
+    lab(1220, 645, "/control/setpoint_validated", anchor="end")
+
+    f.line([(1470, 710), (1470, 650)])
+    lab(1482, 688, "/safety/status")
+
+    f.line([(1917, 500), (1945, 500), (1945, 740), (1542, 740)])
+    lab(1750, 728, "/vehicle/status  ·  /vehicle/height", anchor="middle")
+
+    # Published every tick, but fcu_bridge still subscribes to
+    # /control/setpoint_validated. Switching it over is the last step.
     f.line([(1542, 620), (1556, 620), (1556, 515), (1613, 515)],
            stroke=PLAN, dash="8 6", marker="arrow_plan")
     lab(1530, 560, "/control/setpoint_safe", anchor="end", fill=PLAN)
