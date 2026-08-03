@@ -22,6 +22,20 @@ enum class HoldReason : std::uint8_t
     kUpstreamRequestedHold,
 };
 
+// Kept next to the enum so the two cannot drift apart.
+inline const char * ReasonName(HoldReason reason)
+{
+    switch (reason) {
+        case HoldReason::kPassThrough: return "pass-through";
+        case HoldReason::kSupervisorSilent: return "supervisor silent";
+        case HoldReason::kSupervisorVeto: return "supervisor veto";
+        case HoldReason::kNoSetpointYet: return "no setpoint yet";
+        case HoldReason::kStaleSetpoint: return "stale setpoint";
+        case HoldReason::kUpstreamRequestedHold: return "controller asked to hold";
+    }
+    return "unknown";
+}
+
 struct HoldLimits
 {
     // Same 0.5 s staleness rule the other timer-driven nodes use.
