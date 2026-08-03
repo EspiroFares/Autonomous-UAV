@@ -38,6 +38,12 @@ install(TARGETS
   setpoint_validation_node
   DESTINATION lib/${PROJECT_NAME})
 
+# drone_safety measures saturation against the same envelope this package
+# clamps to, so the header has to leave the package.
+install(DIRECTORY include/
+  DESTINATION include)
+ament_export_include_directories(include)
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
