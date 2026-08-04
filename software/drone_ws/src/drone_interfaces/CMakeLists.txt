@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ControlSetpoint.msg"
   "msg/Detection.msg"
   "msg/Track.msg"
+  "msg/SafetyStatus.msg"
   DEPENDENCIES builtin_interfaces std_msgs
 )
 
