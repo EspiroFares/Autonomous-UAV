@@ -24,7 +24,9 @@ simulation first, then deployed to hardware — where it now flies and follows f
 <!-- Hero demo video. Put your strongest clip here — the real-hardware person-following clip once edited.
 A bare github.com/user-attachments/... URL on its own line renders as an inline video player on GitHub. -->
 
-https://github.com/user-attachments/assets/7d0be21c-c6fa-4e51-9add-62b9557a809c
+
+https://github.com/user-attachments/assets/dedac62f-8eef-4a71-9a92-5e3a34abefe3
+
 
 ---
 
